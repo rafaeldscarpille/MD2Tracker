@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Massive Darkness — Rastreador de Turno</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MD Tracker">
+<meta name="theme-color" content="#c9a84c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold:#c9a84c;--gold-light:#f0d080;--gold-dark:#7a5c1e;--gold-rim:#e8c96a;
+  --dark-bg:#0a0805;--dark-panel:#12100a;--dark-card:#1a1610;--dark-border:#2e2518;
+  --blood-red:#8b1a1a;--parchment:#c8a96e;--glow-gold:rgba(201,168,76,0.3);
+  --epic-purple:#7a3db0;--rare-blue:#2a5fa8;--common-brown:#7a5c2e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--dark-bg);
+  background-image:radial-gradient(ellipse at 50% 0%,rgba(201,168,76,0.08) 0%,transparent 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  font-family:'Cinzel',serif;color:var(--parchment);min-height:100vh;overflow-x:hidden;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeOut{from{opacity:1;}to{opacity:0;}}
+@keyframes popIn{from{transform:scale(0.8);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ===== INTRO ===== */
+#intro-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px 20px;text-align:center;animation:fadeIn 0.8s ease;}
+.intro-logo svg{width:min(340px,88vw);}
+.intro-title{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,5vw,36px);color:var(--gold-light);text-shadow:0 0 30px var(--glow-gold),0 2px 6px #000;letter-spacing:4px;margin:24px 0 6px;}
+.intro-sub{font-family:'IM Fell English',serif;font-style:italic;color:var(--parchment);opacity:0.55;font-size:13px;letter-spacing:2px;margin-bottom:36px;}
+.intro-divider{width:180px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:0 auto 36px;}
+.btn-start{font-family:'Cinzel Decorative',serif;font-size:14px;letter-spacing:3px;padding:15px 44px;border-radius:8px;cursor:pointer;background:linear-gradient(135deg,#4a3010,#1e1208);border:2px solid var(--gold);color:var(--gold-light);transition:all 0.3s;box-shadow:0 0 28px rgba(201,168,76,0.18);}
+.btn-start:hover{background:linear-gradient(135deg,#6a4818,#2e1c0a);box-shadow:0 0 50px rgba(201,168,76,0.45);transform:scale(1.04);}
+
+/* ===== SETUP ===== */
+#setup-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:30px 16px;animation:fadeIn 0.5s ease;}
+.setup-box{background:linear-gradient(160deg,#1e1a0e,#0e0c06);border:2px solid var(--gold-dark);border-radius:16px;padding:32px 28px;width:100%;max-width:440px;position:relative;box-shadow:0 0 60px rgba(0,0,0,0.8),0 0 100px rgba(201,168,76,0.08);}
+.setup-box::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,168,76,0.1);border-radius:12px;pointer-events:none;}
+.setup-title{font-family:'Cinzel Decorative',serif;font-size:15px;color:var(--gold-light);text-align:center;margin-bottom:4px;text-shadow:0 0 14px var(--glow-gold);}
+.setup-hint{font-family:'IM Fell English',serif;font-style:italic;font-size:13px;color:var(--parchment);opacity:0.55;text-align:center;margin-bottom:20px;}
+.player-count-row{display:flex;gap:9px;justify-content:center;margin-bottom:20px;flex-wrap:wrap;}
+.count-btn{font-family:'Cinzel',serif;font-size:17px;font-weight:700;width:48px;height:48px;border-radius:50%;border:2px solid var(--gold-dark);background:radial-gradient(circle at 35% 30%,#2e2412,#0e0c06);color:var(--gold);cursor:pointer;transition:all 0.2s;}
+.count-btn:hover,.count-btn.selected{border-color:var(--gold-rim);color:#fff;background:radial-gradient(circle at 35% 30%,#5a3d0a,#2e1f08);box-shadow:0 0 18px rgba(201,168,76,0.5);}
+.player-inputs{display:flex;flex-direction:column;gap:9px;margin-bottom:20px;}
+.player-input-row{display:flex;align-items:center;gap:9px;}
+.player-input-num{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);width:22px;flex-shrink:0;text-align:right;}
+.player-name-input{flex:1;background:var(--dark-card);border:1px solid var(--gold-dark);border-radius:6px;padding:9px 13px;font-family:'Cinzel',serif;font-size:13px;color:var(--parchment);outline:none;transition:border-color 0.2s;}
+.player-name-input:focus{border-color:var(--gold);}
+.player-name-input::placeholder{color:var(--gold-dark);opacity:0.6;}
+.btn-begin{width:100%;font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;padding:13px;border-radius:8px;cursor:pointer;background:linear-gradient(135deg,#3a2508,#1e1208);border:1px solid var(--gold);color:var(--gold-light);text-transform:uppercase;transition:all 0.25s;}
+.btn-begin:hover{box-shadow:0 0 20px rgba(201,168,76,0.4);}
+
+/* ===== GAME ===== */
+#game-screen{display:none;}
+.header{text-align:center;padding:18px 20px 10px;border-bottom:1px solid var(--gold-dark);}
+.header::after{content:'';display:block;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin-top:9px;}
+.header h1{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,3.2vw,24px);color:var(--gold-light);text-shadow:0 0 20px var(--glow-gold),0 2px 4px #000;letter-spacing:3px;}
+.header .subtitle{font-family:'IM Fell English',serif;font-style:italic;color:var(--parchment);opacity:0.55;font-size:11px;margin-top:3px;}
+.main-layout{display:flex;min-height:calc(100vh - 100px);}
+
+/* sidebar */
+.sidebar{width:200px;min-width:182px;background:var(--dark-panel);border-right:1px solid var(--gold-dark);padding:14px 11px;display:flex;flex-direction:column;gap:9px;position:relative;overflow-y:auto;}
+.sidebar::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(135deg,transparent,transparent 20px,rgba(201,168,76,0.02) 20px,rgba(201,168,76,0.02) 21px);pointer-events:none;}
+.bag-title{font-family:'Cinzel Decorative',serif;font-size:9px;color:var(--gold);text-align:center;letter-spacing:2px;border-bottom:1px solid var(--gold-dark);padding-bottom:7px;}
+.bag-visual{display:flex;justify-content:center;}
+.bag-icon{width:76px;height:76px;background:var(--dark-card);border:2px solid var(--gold-dark);border-radius:50% 50% 60% 60%/40% 40% 60% 60%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.3s;box-shadow:inset 0 -5px 10px rgba(0,0,0,0.5),0 0 14px rgba(201,168,76,0.07);}
+.bag-icon:hover{border-color:var(--gold);box-shadow:inset 0 -5px 10px rgba(0,0,0,0.5),0 0 26px rgba(201,168,76,0.35);transform:scale(1.04);}
+.bag-icon svg{width:38px;height:38px;}
+.bag-counts{display:flex;flex-direction:column;gap:5px;}
+.token-row{display:flex;align-items:center;justify-content:space-between;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:6px;padding:5px 8px;font-size:10px;}
+.token-label{display:flex;align-items:center;gap:5px;color:var(--parchment);opacity:0.85;}
+.token-dot{width:9px;height:9px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);}
+.dot-common{background:var(--common-brown);}.dot-rare{background:var(--rare-blue);}.dot-epic{background:var(--epic-purple);}
+.token-count{font-family:'Cinzel',serif;font-weight:700;font-size:13px;}
+.count-common{color:#c8a96e;}.count-rare{color:#6699dd;}.count-epic{color:#bb77ee;}
+.draw-btn{background:linear-gradient(135deg,#2e1f08,#1a1208);border:1px solid var(--gold-dark);border-radius:7px;color:var(--gold-light);font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:7px 5px;cursor:pointer;text-align:center;text-transform:uppercase;transition:all 0.25s;width:100%;}
+.draw-btn:hover{border-color:var(--gold);background:linear-gradient(135deg,#3e2a0a,#261908);box-shadow:0 0 12px rgba(201,168,76,0.25);}
+
+/* players sidebar */
+.players-section{margin-top:3px;}
+.players-section-title{font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;text-align:center;margin-bottom:7px;border-top:1px solid var(--gold-dark);padding-top:7px;}
+.player-card{background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:7px 9px;margin-bottom:5px;}
+.player-name-lbl{font-family:'Cinzel',serif;font-size:10px;color:var(--gold-light);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.player-level-row{display:flex;align-items:center;justify-content:space-between;}
+.player-level-label{font-size:8px;color:var(--parchment);opacity:0.5;letter-spacing:1px;}
+.player-level-val{font-family:'Cinzel Decorative',serif;font-size:15px;color:var(--gold-light);text-shadow:0 0 10px var(--glow-gold);line-height:1;}
+
+/* center */
+.center-content{flex:1;padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:20px;}
+
+/* track */
+.track-section{width:100%;max-width:390px;}
+.track-label{font-size:9px;letter-spacing:3px;color:var(--gold);text-align:center;margin-bottom:9px;text-transform:uppercase;}
+.track-container{background:linear-gradient(180deg,#1c1508 0%,#0e0c06 100%);border:1px solid var(--gold-dark);border-radius:12px;padding:13px 16px;position:relative;box-shadow:inset 0 2px 8px rgba(0,0,0,0.7),0 0 18px rgba(0,0,0,0.5);}
+.track-container::before{content:'';position:absolute;inset:2px;border:1px solid rgba(201,168,76,0.09);border-radius:10px;pointer-events:none;}
+.track-icons{display:none;}
+.track-steps{display:flex;flex-direction:column;align-items:stretch;position:relative;}
+.track-line{position:absolute;left:24px;top:24px;bottom:24px;width:3px;background:linear-gradient(180deg,var(--gold-dark),var(--gold),var(--gold-dark));z-index:0;}
+.step-node{position:relative;z-index:1;display:flex;align-items:center;gap:11px;padding:3px 0;}
+.step-node-icon{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.step-node-icon svg{width:22px;height:22px;opacity:0.85;}
+.step-node-label{font-family:'IM Fell English',serif;font-size:11px;font-style:italic;color:var(--parchment);opacity:0.58;flex:1;}
+.step-circle{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#2e2412,#0e0c06);border:3px solid var(--gold-dark);display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;font-size:15px;font-weight:700;color:var(--gold);cursor:pointer;transition:all 0.3s;flex-shrink:0;box-shadow:inset 0 2px 5px rgba(0,0,0,0.6),0 2px 7px rgba(0,0,0,0.4);}
+.step-circle:hover{border-color:var(--gold-light);color:var(--gold-light);box-shadow:inset 0 2px 5px rgba(0,0,0,0.6),0 0 16px rgba(201,168,76,0.5);transform:scale(1.1);}
+.step-circle.active{border-color:var(--gold-rim);color:#fff;background:radial-gradient(circle at 35% 30%,#5a3d0a,#2e1f08);box-shadow:inset 0 2px 4px rgba(0,0,0,0.3),0 0 22px rgba(201,168,76,0.7),0 0 46px rgba(201,168,76,0.22);}
+.step-circle.passed{border-color:var(--gold-dark);background:radial-gradient(circle at 35% 30%,#1e1a08,#0e0c06);color:var(--gold-dark);opacity:0.55;}
+.step-arrow{display:flex;align-items:center;padding-left:22px;height:11px;z-index:1;}
+.step-arrow::before{content:'';display:block;width:2px;height:11px;background:var(--gold-dark);border-radius:1px;}
+.extra-track-section{width:100%;max-width:390px;display:none;}
+.extra-track-section.visible{display:block;}
+
+/* controls */
+.controls{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;}
+.btn{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:9px 16px;border-radius:6px;cursor:pointer;transition:all 0.25s;border:1px solid;}
+.btn-advance{background:linear-gradient(135deg,#3a2508,#1e1208);border-color:var(--gold);color:var(--gold-light);}
+.btn-advance:hover{background:linear-gradient(135deg,#5a3a0e,#2e1e08);box-shadow:0 0 16px rgba(201,168,76,0.4);}
+.btn-reset{background:linear-gradient(135deg,#1a0808,#0e0808);border-color:var(--blood-red);color:#cc6666;}
+.btn-reset:hover{background:linear-gradient(135deg,#2e1010,#180a0a);box-shadow:0 0 12px rgba(139,26,26,0.4);}
+
+/* info */
+.info-panel{width:100%;max-width:800px;background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:11px 36px;font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.85;text-align:center;min-height:42px;line-height:1.6;position:relative;}
+.info-panel::before{content:'❧';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--gold-dark);font-size:14px;}
+.info-panel::after{content:'❧';position:absolute;right:9px;top:50%;transform:translateY(-50%) scaleX(-1);color:var(--gold-dark);font-size:14px;}
+
+/* overlays */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.overlay.open{display:flex;}
+.popup{background:linear-gradient(160deg,#1e1a0e,#0e0c06);border:2px solid var(--gold-dark);border-radius:14px;padding:26px 30px;max-width:420px;width:92%;text-align:center;position:relative;box-shadow:0 0 40px rgba(0,0,0,0.9),0 0 70px rgba(201,168,76,0.1);animation:popIn 0.3s cubic-bezier(.34,1.56,.64,1);}
+.popup::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,168,76,0.1);border-radius:10px;pointer-events:none;}
+.popup-icon{font-size:34px;margin-bottom:7px;}
+.popup-title{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold-light);margin-bottom:7px;text-shadow:0 0 14px var(--glow-gold);}
+.popup-body{font-family:'IM Fell English',serif;font-size:14px;color:var(--parchment);margin-bottom:16px;line-height:1.6;opacity:0.9;}
+.popup-separator{width:55px;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dark),transparent);margin:9px auto;}
+.ornament{position:absolute;width:17px;height:17px;border-color:var(--gold-dark);border-style:solid;opacity:0.45;}
+.ornament-tl{top:7px;left:7px;border-width:2px 0 0 2px;}
+.ornament-tr{top:7px;right:7px;border-width:2px 2px 0 0;}
+.ornament-bl{bottom:7px;left:7px;border-width:0 0 2px 2px;}
+.ornament-br{bottom:7px;right:7px;border-width:0 2px 2px 0;}
+.option-btn{font-family:'Cinzel',serif;font-size:11px;padding:7px 14px;border-radius:6px;border:1px solid var(--gold-dark);background:linear-gradient(135deg,#2e2008,#1a1208);color:var(--gold);cursor:pointer;transition:all 0.2s;}
+.option-btn:hover,.option-btn.selected{border-color:var(--gold);color:var(--gold-light);background:linear-gradient(135deg,#4a3210,#281e0a);box-shadow:0 0 10px rgba(201,168,76,0.3);}
+.option-btn.selected{box-shadow:0 0 14px rgba(201,168,76,0.48),inset 0 0 7px rgba(201,168,76,0.08);}
+.yes-no-btns{display:flex;gap:11px;justify-content:center;margin-top:6px;}
+.btn-yes{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:9px 24px;border-radius:6px;cursor:pointer;background:linear-gradient(135deg,#3a2508,#1e1208);border:1px solid var(--gold);color:var(--gold-light);transition:all 0.2s;}
+.btn-yes:hover{box-shadow:0 0 13px rgba(201,168,76,0.4);}
+.btn-no{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:9px 24px;border-radius:6px;cursor:pointer;background:linear-gradient(135deg,#1a0808,#0e0808);border:1px solid var(--blood-red);color:#cc6666;transition:all 0.2s;}
+.btn-no:hover{box-shadow:0 0 11px rgba(139,26,26,0.35);}
+.btn-ok{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:9px 32px;border-radius:6px;cursor:pointer;background:linear-gradient(135deg,#3a2508,#1e1208);border:1px solid var(--gold);color:var(--gold-light);transition:all 0.2s;margin-top:4px;}
+.btn-ok:hover{box-shadow:0 0 13px rgba(201,168,76,0.4);}
+
+/* hero level select list */
+.hero-select-list{display:flex;flex-direction:column;gap:7px;margin:10px 0;text-align:left;max-height:260px;overflow-y:auto;}
+.hero-select-item{background:var(--dark-card);border:1px solid var(--dark-border);border-radius:8px;padding:9px 11px;cursor:pointer;transition:all 0.2s;}
+.hero-select-item:hover:not(.hero-maxed){border-color:var(--gold-dark);}
+.hero-select-item.hero-leveled{border-color:var(--gold);background:linear-gradient(135deg,#2a1e06,#16100a);}
+.hero-select-item.hero-maxed{opacity:0.38;cursor:not-allowed;}
+.hero-item-top{display:flex;align-items:center;justify-content:space-between;}
+.hero-item-name{font-family:'Cinzel',serif;font-size:11px;color:var(--parchment);}
+.hero-item-lvl{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--gold-dark);}
+.hero-item-lvl.leveled{color:var(--gold-light);}
+.hero-level-select{display:none;margin-top:8px;gap:6px;flex-wrap:wrap;justify-content:center;}
+.hero-level-select.visible{display:flex;}
+
+/* token result */
+.token-result{display:inline-block;padding:8px 18px;border-radius:8px;font-family:'Cinzel Decorative',serif;font-size:15px;font-weight:700;margin:7px 0;}
+.result-common{background:linear-gradient(135deg,#3a2c10,#1e1808);border:2px solid #7a5c2e;color:#c8a96e;}
+.result-rare{background:linear-gradient(135deg,#0e1e38,#080e1e);border:2px solid #2a5fa8;color:#6699dd;box-shadow:0 0 18px rgba(42,95,168,0.32);}
+.result-epic{background:linear-gradient(135deg,#2a1040,#140820);border:2px solid #7a3db0;color:#bb77ee;box-shadow:0 0 22px rgba(122,61,176,0.46);}
+
+@media(max-width:560px){
+  .sidebar{width:150px;min-width:140px;}
+  .step-circle{width:40px;height:40px;font-size:13px;}
+  .track-section{max-width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== INTRO ===== -->
+<div id="intro-screen">
+  <div class="intro-logo">
+    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#c9a84c" stop-opacity="0.15"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <linearGradient id="gG" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f0d080"/><stop offset="50%" stop-color="#c9a84c"/><stop offset="100%" stop-color="#7a5c1e"/></linearGradient>
+        <linearGradient id="gG2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#e0c070"/><stop offset="100%" stop-color="#a07830"/></linearGradient>
+      </defs>
+      <ellipse cx="200" cy="100" rx="180" ry="90" fill="url(#bgGlow)"/>
+      <line x1="60" y1="22" x2="340" y2="22" stroke="url(#gG)" stroke-width="1" opacity="0.55"/>
+      <polygon points="200,10 207,20 193,20" fill="#c9a84c" opacity="0.75"/>
+      <path d="M200 40 L220 52 L220 78 Q200 92 200 92 Q200 92 180 78 L180 52 Z" fill="none" stroke="url(#gG)" stroke-width="1.5" filter="url(#glow)"/>
+      <path d="M200 46 L214 55 L214 75 Q200 86 200 86 Q200 86 186 75 L186 55 Z" fill="rgba(201,168,76,0.07)"/>
+      <ellipse cx="200" cy="64" rx="8" ry="7" fill="none" stroke="#c9a84c" stroke-width="1.2" opacity="0.88"/>
+      <circle cx="197" cy="63" r="1.5" fill="#c9a84c" opacity="0.8"/>
+      <circle cx="203" cy="63" r="1.5" fill="#c9a84c" opacity="0.8"/>
+      <line x1="197" y1="68" x2="197" y2="70" stroke="#c9a84c" stroke-width="1" opacity="0.7"/>
+      <line x1="200" y1="68" x2="200" y2="71" stroke="#c9a84c" stroke-width="1" opacity="0.7"/>
+      <line x1="203" y1="68" x2="203" y2="70" stroke="#c9a84c" stroke-width="1" opacity="0.7"/>
+      <text x="200" y="112" text-anchor="middle" font-family="serif" font-size="40" font-weight="900" fill="url(#gG)" filter="url(#glow)" letter-spacing="8">MASSIVE</text>
+      <text x="200" y="144" text-anchor="middle" font-family="serif" font-size="28" font-weight="700" fill="url(#gG2)" letter-spacing="6" opacity="0.88">DARKNESS</text>
+      <circle cx="336" cy="140" r="14" fill="#1a1208" stroke="#c9a84c" stroke-width="1.5"/>
+      <text x="336" y="146" text-anchor="middle" font-family="serif" font-size="18" font-weight="900" fill="#f0d080">2</text>
+      <line x1="60" y1="163" x2="340" y2="163" stroke="url(#gG)" stroke-width="1" opacity="0.45"/>
+      <path d="M65 25 L65 35 M65 25 L75 25" stroke="#c9a84c" stroke-width="1.5" opacity="0.45"/>
+      <path d="M335 25 L335 35 M335 25 L325 25" stroke="#c9a84c" stroke-width="1.5" opacity="0.45"/>
+      <path d="M65 160 L65 150 M65 160 L75 160" stroke="#c9a84c" stroke-width="1.5" opacity="0.45"/>
+      <path d="M335 160 L335 150 M335 160 L325 160" stroke="#c9a84c" stroke-width="1.5" opacity="0.45"/>
+    </svg>
+  </div>
+  <div class="intro-title">Rastreador de Campanha</div>
+  <div class="intro-sub">Trilha de Turno &amp; Sacola de Tesouros</div>
+  <div class="intro-divider"></div>
+  <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+    <button class="btn-start" onclick="showSetup('full')">⚔ Modo Completo ⚔</button>
+    <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:11px;color:var(--parchment);opacity:0.45;letter-spacing:1px;">Com sorteio automático de monstros</div>
+    <button class="btn-start" onclick="showSetup('simple')" style="background:linear-gradient(135deg,#1e1a10,#0e0c08);border-color:var(--gold-dark);color:var(--parchment);font-size:12px;padding:12px 36px;opacity:0.8;">📜 Modo Simples</button>
+    <div style="font-family:'IM Fell English',serif;font-style:italic;font-size:11px;color:var(--parchment);opacity:0.45;letter-spacing:1px;">Trilha e sacola sem sorteio de monstros</div>
+  </div>
+</div>
+
+<!-- ===== SETUP ===== -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚔️</div>
+    <div class="setup-title">Preparar Partida</div>
+    <div class="setup-hint">Quantos heróis entrarão nas trevas?</div>
+    <div class="player-count-row">
+      <button class="count-btn" onclick="selectCount(1)">1</button>
+      <button class="count-btn" onclick="selectCount(2)">2</button>
+      <button class="count-btn" onclick="selectCount(3)">3</button>
+      <button class="count-btn" onclick="selectCount(4)">4</button>
+      <button class="count-btn" onclick="selectCount(5)">5</button>
+      <button class="count-btn" onclick="selectCount(6)">6</button>
+    </div>
+    <div class="player-inputs" id="player-inputs"></div>
+    <button class="btn-begin" id="btn-begin" style="display:none" onclick="startGame()">⚔ Adentrar as Trevas ⚔</button>
+  </div>
+</div>
+
+<!-- ===== GAME ===== -->
+<div id="game-screen">
+  <div class="header">
+    <h1>Massive Darkness 2</h1>
+    <div class="subtitle" id="game-subtitle">Rastreador de Turno &amp; Sacola de Tesouros</div>
+  </div>
+  <div class="main-layout">
+    <div class="sidebar">
+      <div class="bag-title">⚔ Sacola de Itens</div>
+      <div class="bag-visual">
+        <div class="bag-icon" onclick="drawFromBag()">
+          <svg viewBox="0 0 80 80" fill="none">
+            <ellipse cx="40" cy="58" rx="28" ry="18" fill="#1a1208" stroke="#c9a84c" stroke-width="1.5"/>
+            <path d="M14 50 Q12 32 18 24 Q24 16 40 15 Q56 16 62 24 Q68 32 66 50" fill="#1a1208" stroke="#c9a84c" stroke-width="1.5"/>
+            <path d="M32 15 Q33 8 40 6 Q47 8 48 15" stroke="#c9a84c" stroke-width="1.5" fill="none"/>
+            <circle cx="40" cy="6" r="3" fill="#c9a84c"/>
+            <ellipse cx="40" cy="38" rx="16" ry="6" fill="rgba(201,168,76,0.07)" stroke="rgba(201,168,76,0.18)" stroke-width="1"/>
+            <circle cx="32" cy="42" r="3" fill="#7a5c2e" opacity="0.8"/>
+            <circle cx="42" cy="36" r="4" fill="#2a5fa8" opacity="0.7"/>
+            <circle cx="50" cy="44" r="3.5" fill="#7a3db0" opacity="0.8"/>
+          </svg>
+        </div>
+      </div>
+      <div class="bag-counts">
+        <div class="token-row"><div class="token-label"><div class="token-dot dot-common"></div>Comum</div><div class="token-count count-common" id="cnt-common">10</div></div>
+        <div class="token-row"><div class="token-label"><div class="token-dot dot-rare"></div>Raro</div><div class="token-count count-rare" id="cnt-rare">5</div></div>
+        <div class="token-row"><div class="token-label"><div class="token-dot dot-epic"></div>Épico</div><div class="token-count count-epic" id="cnt-epic">0</div></div>
+      </div>
+      <button class="draw-btn" onclick="drawFromBag()">🎲 Sortear Item</button>
+      <div class="players-section">
+        <div class="players-section-title">Heróis</div>
+        <div id="players-list"></div>
+      </div>
+    </div>
+
+    <div class="center-content">
+      <div style="display:flex;gap:13px;width:100%;justify-content:center;align-items:flex-start;flex-wrap:wrap;">
+        <div class="track-section">
+          <div class="track-label">⬥ Trilha de Turno ⬥</div>
+          <div class="track-container">
+            <div class="track-icons" id="track-icons-main"></div>
+            <div class="track-steps" id="main-track"><div class="track-line"></div></div>
+          </div>
+        </div>
+        <div class="track-section extra-track-section" id="extra-track-section">
+          <div class="track-label" style="color:#bb77ee;">⬥ Trilha Extra ⬥</div>
+          <div class="track-container" style="border-color:#4a2a70;">
+            <div class="track-icons" id="track-icons-extra"></div>
+            <div class="track-steps" id="extra-track"><div class="track-line" style="background:linear-gradient(180deg,#2a1040,#7a3db0,#2a1040);"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn btn-advance" onclick="advanceStep()">▶ Avançar Turno</button>
+        <button class="btn" onclick="retreatStep()" style="background:linear-gradient(135deg,#1a1408,#0e0c06);border-color:#5a4a1e;color:#a08840;">◀ Recuar</button>
+        <button id="btn-spawn-monster" class="btn" onclick="openSpawnMonster()" style="background:linear-gradient(135deg,#1a0a0a,#0e0606);border-color:#7a2a2a;color:#dd6666;">💀 Invocar Monstro</button>
+        <button class="btn btn-reset" onclick="resetGame()">↺ Reiniciar</button>
+      </div>
+      <!-- ACTIVE MONSTERS PANEL -->
+      <div id="active-monsters-panel" style="width:100%;max-width:860px;display:none;flex-direction:column;gap:10px;"></div>
+      <div class="info-panel" id="info-panel">Adentrem as trevas!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== OVERLAYS ===== -->
+<div class="overlay" id="overlay-roaming">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">💀</div>
+    <div class="popup-title" id="roaming-title">Monstro!</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body" id="roaming-body"></div>
+    <button class="btn-ok" id="btn-roaming-ok">Entendido</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-token">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon" id="token-icon">💎</div>
+    <div class="popup-title" id="token-popup-title">Token Adicionado!</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body" id="token-popup-body"></div>
+    <button class="btn-ok" id="btn-token-ok">OK</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-levelup-ask">
+  <div class="popup" style="max-width:460px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚔️</div>
+    <div class="popup-title">Algum Herói Subiu de Nível?</div>
+    <div class="popup-separator"></div>
+    <div style="font-family:'IM Fell English',serif;font-size:12px;color:var(--parchment);opacity:0.6;margin-bottom:10px;">Toque em um herói para selecionar o novo nível:</div>
+    <div class="hero-select-list" id="hero-levelup-list"></div>
+    <div id="levelup-summary" style="font-family:'IM Fell English',serif;font-size:12px;color:var(--parchment);opacity:0.85;margin:10px 0;min-height:18px;line-height:1.5;"></div>
+    <div class="yes-no-btns">
+      <button class="btn-yes" onclick="confirmAllLevelUps()">Confirmar</button>
+      <button class="btn-no" onclick="levelUpAsked=false;closeOverlay('overlay-levelup-ask')">Nenhum</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-levelup-result">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon" id="levelup-result-icon">🏆</div>
+    <div class="popup-title" id="levelup-result-title">Heróis Evoluíram!</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body" id="levelup-result-body"></div>
+    <button class="btn-ok" id="btn-levelup-result-ok" onclick="closeOverlay('overlay-levelup-result')">OK</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-draw">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon" id="draw-icon">🎲</div>
+    <div class="popup-title">Item Sorteado!</div>
+    <div class="popup-separator"></div>
+    <div id="draw-result-area"></div>
+    <div class="popup-body" id="draw-flavor" style="margin-top:7px;"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-draw')">OK</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-empty">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">💀</div>
+    <div class="popup-title">Sacola Vazia!</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body">A sacola não possui mais tokens de tesouro!</div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-empty')">Fechar</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-inspect">
+  <div class="popup" style="max-width:450px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">🎒</div>
+    <div class="popup-title">Conteúdo da Sacola</div>
+    <div class="popup-separator"></div>
+    <div id="inspect-total" style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.65;margin-bottom:11px;"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;" id="inspect-rows"></div>
+    <div style="border-top:1px solid var(--gold-dark);padding-top:11px;margin-bottom:13px;">
+      <div style="font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:7px;">Representação Visual</div>
+      <div id="inspect-grid" style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-height:100px;overflow-y:auto;"></div>
+    </div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-inspect')">Fechar</button>
+  </div>
+</div>
+
+<!-- GIZMO PICK (level 3: choose between 2 tokens) -->
+<div class="overlay" id="overlay-gizmo-pick">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚙️</div>
+    <div class="popup-title" id="gizmo-pick-title">Escolha uma Engenhoca</div>
+    <div class="popup-separator"></div>
+    <div style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.7;margin-bottom:12px;">Dois tokens foram retirados da sacola. Escolha um para guardar — o outro retorna à sacola:</div>
+    <div class="popup-options" id="gizmo-pick-options"></div>
+  </div>
+</div>
+
+<!-- GIZMO RESULT -->
+<div class="overlay" id="overlay-gizmo-result">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚙️</div>
+    <div class="popup-title">Engenhoca Obtida!</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body" id="gizmo-result-body" style="white-space:pre-line;"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-gizmo-result')">OK</button>
+  </div>
+</div>
+
+<!-- GIZMO UPGRADE -->
+<div class="overlay" id="overlay-gizmo-upgrade">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚙️</div>
+    <div class="popup-title">Evoluir Habilidade Gizmo?</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body"><span id="gizmo-upgrade-name"></span> pode evoluir o Gizmo para o <strong style="color:var(--gold-light)">Nível <span id="gizmo-upgrade-level"></span></strong>. Deseja evoluir?<br><br><span id="gizmo-upgrade-hint" style="font-size:12px;opacity:0.7;"></span></div>
+    <div class="yes-no-btns">
+      <button class="btn-yes" id="btn-gizmo-yes">Evoluir</button>
+      <button class="btn-no" id="btn-gizmo-no">Não agora</button>
+    </div>
+  </div>
+</div>
+
+<!-- TINKERER INVENTORY -->
+<div class="overlay" id="overlay-tinv">
+  <div class="popup" style="max-width:400px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚙️</div>
+    <div class="popup-title" id="tinv-name">Inventário</div>
+    <div class="popup-separator"></div>
+    <div id="tinv-total" style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.65;margin-bottom:10px;"></div>
+    <div id="tinv-rows" style="margin-bottom:12px;"></div>
+    <div style="border-top:1px solid var(--gold-dark);padding-top:10px;margin-bottom:12px;">
+      <div style="font-size:8px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:7px;">Engenhocas</div>
+      <div id="tinv-grid" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-height:110px;overflow-y:auto;"></div>
+    </div>
+    <button id="tinv-use-btn" onclick="openUseGadgets()" style="width:100%;margin-bottom:8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:9px;border-radius:7px;cursor:pointer;background:linear-gradient(135deg,#0e2a28,#081a18);border:1px solid #2a8a7a;color:#44ddcc;text-transform:uppercase;transition:all 0.2s;">🔧 Utilizar Engenhocas</button>
+    <button class="btn-ok" onclick="closeOverlay('overlay-tinv')">Fechar</button>
+  </div>
+</div>
+
+<!-- USE GADGETS -->
+<div class="overlay" id="overlay-use-gadgets">
+  <div class="popup" style="max-width:400px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">🔧</div>
+    <div class="popup-title">Utilizar Engenhocas</div>
+    <div class="popup-separator"></div>
+    <div style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.65;margin-bottom:10px;">Selecione quantas utilizar. Elas retornarão à sacola.</div>
+    <div id="use-gadget-rows" style="margin-bottom:12px;"></div>
+    <div id="use-gadget-summary" style="font-family:'IM Fell English',serif;font-size:13px;color:var(--gold-light);min-height:20px;margin-bottom:14px;font-style:italic;"></div>
+    <div class="yes-no-btns">
+      <button class="btn-yes" onclick="confirmUseGadgets()">Confirmar</button>
+      <button class="btn-no" onclick="closeOverlay('overlay-use-gadgets')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPAWN MONSTER TYPE -->
+<div class="overlay" id="overlay-spawn-type">
+  <div class="popup">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">💀</div>
+    <div class="popup-title">Qual Monstro Apareceu?</div>
+    <div class="popup-separator"></div>
+    <div class="popup-options" style="flex-direction:column;gap:8px;">
+      <button class="option-btn" style="width:100%;font-size:13px;" onclick="spawnHorde()">🔴 Turba (sorteio automático)</button>
+      <button class="option-btn" style="width:100%;font-size:13px;" onclick="spawnRoaming()">💀 Monstro Vagante</button>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn-no" onclick="closeOverlay('overlay-spawn-type')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- HORDE RESULT -->
+<div class="overlay" id="overlay-horde-spawned">
+  <div class="popup" style="max-width:480px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon" id="horde-spawn-icon">👹</div>
+    <div class="popup-title" id="horde-spawn-name">Turba Invocada!</div>
+    <div class="popup-separator"></div>
+    <div id="horde-spawn-body" style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);line-height:1.7;margin-bottom:14px;text-align:left;"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-horde-spawned')">Entendido</button>
+  </div>
+</div>
+
+<!-- ATTACK DAMAGE -->
+<div class="overlay" id="overlay-attack">
+  <div class="popup" style="max-width:420px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">⚔️</div>
+    <div class="popup-title" id="atk-title">Causar Dano</div>
+    <div class="popup-separator"></div>
+    <div style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.7;margin-bottom:14px;" id="atk-info"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:16px;">
+      <button onclick="changeDmg(-1)" style="width:40px;height:40px;border-radius:50%;background:var(--dark-card);border:1px solid var(--gold-dark);color:var(--gold);font-size:20px;cursor:pointer;">−</button>
+      <div id="dmg-val" style="font-family:'Cinzel Decorative',serif;font-size:32px;color:var(--gold-light);min-width:50px;text-align:center;">1</div>
+      <button onclick="changeDmg(1)" style="width:40px;height:40px;border-radius:50%;background:var(--dark-card);border:1px solid var(--gold-dark);color:var(--gold);font-size:20px;cursor:pointer;">+</button>
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--parchment);opacity:0.6;margin-bottom:14px;letter-spacing:1px;">QUEM ATACOU?</div>
+    <div id="atk-player-list" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:16px;"></div>
+    <div class="yes-no-btns">
+      <button class="btn-yes" onclick="applyDamage()">Aplicar Dano</button>
+      <button class="btn-no" onclick="closeOverlay('overlay-attack')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MONSTER INFO -->
+<div class="overlay" id="overlay-minfo">
+  <div class="popup" style="max-width:440px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon" id="minfo-icon">👹</div>
+    <div class="popup-title" id="minfo-name">Monstro</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body" id="minfo-body" style="text-align:left;font-size:13px;line-height:1.8;"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-minfo')">Fechar</button>
+  </div>
+</div>
+
+<!-- KILL REWARD -->
+<div class="overlay" id="overlay-kill-reward">
+  <div class="popup" style="max-width:440px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">🏆</div>
+    <div class="popup-title" id="kill-reward-title">Monstro Derrotado!</div>
+    <div class="popup-separator"></div>
+    <div class="popup-body" id="kill-reward-body"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-kill-reward')">OK</button>
+  </div>
+</div>
+
+<script>
+// ===== SCREENS =====
+let gameMode='full'; // 'full' | 'simple'
+
+function showSetup(mode){
+  gameMode=mode||'full';
+  const intro=document.getElementById('intro-screen');
+  intro.style.animation='fadeOut 0.4s ease forwards';
+  setTimeout(()=>{ intro.style.display='none'; document.getElementById('setup-screen').style.display='flex'; },380);
+}
+
+const CLASSES=['Paladino','Mago','Xamã','Berserker','Necromante','Monge','Tinkerer','Druida','Patrulheiro','Ladrão','Bardo'];
+
+let selectedCount=0;
+function selectCount(n){
+  selectedCount=n;
+  document.querySelectorAll('.count-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===n));
+  const inp=document.getElementById('player-inputs');
+  inp.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const opts=CLASSES.map(c=>`<option value="${c}">${c}</option>`).join('');
+    inp.innerHTML+=`
+      <div class="player-input-row">
+        <div class="player-input-num">${i}.</div>
+        <input class="player-name-input" id="pname-${i}" type="text" placeholder="Nome do Herói ${i}" maxlength="20" style="flex:1.2;">
+        <select class="player-name-input" id="pclass-${i}" style="flex:1;padding:9px 6px;cursor:pointer;">
+          <option value="" disabled selected>Classe</option>
+          ${opts}
+        </select>
+      </div>`;
+  }
+  document.getElementById('btn-begin').style.display='block';
+}
+
+function startGame(){
+  if(!selectedCount) return;
+  // Validate all fields filled
+  for(let i=1;i<=selectedCount;i++){
+    const name=document.getElementById(`pname-${i}`).value.trim();
+    const cls=document.getElementById(`pclass-${i}`).value;
+    if(!name||!cls){
+      const field=document.getElementById(`pname-${i}`);
+      field.style.borderColor='#cc3333';
+      const sel=document.getElementById(`pclass-${i}`);
+      sel.style.borderColor=cls?'var(--gold-dark)':'#cc3333';
+      setTimeout(()=>{field.style.borderColor='var(--gold-dark)';sel.style.borderColor='var(--gold-dark)';},2000);
+      alert(`Preencha o nome e a classe do Herói ${i}.`);
+      return;
+    }
+  }
+  players=[];
+  for(let i=1;i<=selectedCount;i++){
+    const v=document.getElementById(`pname-${i}`).value.trim();
+    const cls=document.getElementById(`pclass-${i}`).value;
+    players.push({
+      name:v,
+      class:cls,
+      level:1,
+      isTinkerer:cls==='Tinkerer',
+      gizmoLevel:cls==='Tinkerer'?1:0,
+      gizmoUsedThisTurn:false,
+      gizmoInventory:[],
+    });
+  }
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('game-screen').style.display='block';
+  // Show/hide spawn button based on mode
+  document.getElementById('btn-spawn-monster').style.display=gameMode==='full'?'':'none';
+  renderPlayersSidebar();
+  initTracks();
+  setInfo('Que os heróis entrem nas trevas! Clique em <strong style="color:var(--gold)">▶ Avançar Turno</strong> para começar.');
+}
+
+// ===== STATE =====
+let bag={common:10,rare:5,epic:0};
+let currentStep=1, isExtraTrack=false;
+let pendingEvents=[], processingEvent=false, levelUpAsked=false;
+let players=[];
+let pendingLevelChoices={};
+const levelRewards={2:['rare'],3:['epic'],4:['epic'],5:['epic']};
+const MAX_LEVEL=5;
+
+const mainEvents={
+  3:{type:'roaming'},4:{type:'token',token:'rare'},
+  5:{type:'horde'},  6:{type:'token',token:'epic'},
+  7:{type:'horde'},  8:{type:'token',token:'epic'},
+  9:{type:'roaming'},
+};
+const extraEvents={2:{type:'horde'},3:{type:'roaming'},4:{type:'horde'}};
+
+// ===== ICONS =====
+const iconSkullRed=`<svg viewBox="0 0 24 24" fill="none"><path d="M12 3C8 3 5 6 5 10c0 2 1 4 3 5v3h8v-3c2-1 3-3 3-5 0-4-3-7-7-7z" stroke="#cc3333" stroke-width="1.5" fill="rgba(180,30,30,0.18)"/><circle cx="9" cy="10" r="1.2" fill="#cc3333"/><circle cx="15" cy="10" r="1.2" fill="#cc3333"/><path d="M10 19v2M14 19v2" stroke="#cc3333" stroke-width="1.5"/></svg>`;
+const iconSkull=`<svg viewBox="0 0 24 24" fill="none"><path d="M12 3C8 3 5 6 5 10c0 2 1 4 3 5v3h8v-3c2-1 3-3 3-5 0-4-3-7-7-7z" stroke="#c9a84c" stroke-width="1.5" fill="rgba(201,168,76,0.1)"/><circle cx="9" cy="10" r="1.2" fill="#c9a84c"/><circle cx="15" cy="10" r="1.2" fill="#c9a84c"/><path d="M10 19v2M14 19v2" stroke="#c9a84c" stroke-width="1.5"/></svg>`;
+const iconStarBlue=`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" stroke="#4488dd" stroke-width="1.3" fill="rgba(42,95,168,0.25)"/></svg>`;
+const iconStar=`<svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" stroke="#bb77ee" stroke-width="1.2" fill="rgba(122,61,176,0.2)"/></svg>`;
+function getIconForStep(s,isEx){
+  const ev=isEx?extraEvents[s]:mainEvents[s]; if(!ev) return '';
+  if(ev.type==='roaming') return iconSkullRed;
+  if(ev.type==='horde')   return iconSkull;
+  if(ev.type==='token'&&ev.token==='rare') return iconStarBlue;
+  if(ev.type==='token'&&ev.token==='epic') return iconStar;
+  return '';
+}
+
+// ===== PLAYERS =====
+function renderPlayersSidebar(){
+  const el=document.getElementById('players-list');
+  el.innerHTML='';
+  players.forEach((p,i)=>{
+    const gizmoLvlTxt = p.isTinkerer && p.gizmoLevel>1 ? ` · Gizmo Lv${p.gizmoLevel}` : p.isTinkerer ? ' · Gizmo Lv1' : '';
+    const invTxt = p.isTinkerer && p.gizmoInventory.length>0
+      ? `<div style="margin-top:4px;font-size:8px;color:#44bbaa;letter-spacing:1px;">ENGENHOCAS: ${p.gizmoInventory.map(t=>t==='common'?'C':t==='rare'?'R':'E').join(' ')}</div>`
+      : '';
+    const gizmoBtnHtml = p.isTinkerer
+      ? `<button id="gizmo-btn-${i}" style="margin-top:6px;width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:6px 4px;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;background:linear-gradient(135deg,#0e2a28,#081a18);border:1px solid #2a8a7a;color:#44ddcc;">⚙ Gizmo</button>
+         <button id="inv-btn-${i}" style="margin-top:4px;width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:5px 4px;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;background:linear-gradient(135deg,#1a1c2e,#0e0e18);border:1px solid #2a4a7a;color:#6688cc;">📦 Inventário</button>`
+      : '';
+    el.innerHTML+=`
+      <div class="player-card" id="pcard-${i}">
+        <div class="player-name-lbl">${p.name}</div>
+        <div style="font-size:8px;color:var(--gold-dark);letter-spacing:1px;margin-bottom:3px;">${p.class}${gizmoLvlTxt}</div>
+        <div class="player-level-row">
+          <div class="player-level-label">NÍVEL</div>
+          <div class="player-level-val" id="plvl-${i}">${p.level}</div>
+        </div>
+        ${gizmoBtnHtml}
+        <div id="ginv-${i}">${invTxt}</div>
+      </div>`;
+  });
+  // Attach gizmo button events and state after render
+  players.forEach((p,i)=>{
+    if(!p.isTinkerer) return;
+    const b=document.getElementById(`gizmo-btn-${i}`);
+    if(b){ updateGizmoBtnState(i); b.addEventListener('click',()=>useGizmo(i)); }
+    const inv=document.getElementById(`inv-btn-${i}`);
+    if(inv) inv.addEventListener('click',()=>showTinkererInventory(i));
+  });
+}
+
+function updatePlayerLevel(idx,lvl){
+  players[idx].level=lvl;
+  const el=document.getElementById(`plvl-${idx}`);
+  if(el) el.textContent=lvl;
+}
+
+function updateGizmoBtnState(idx){
+  const p=players[idx];
+  const b=document.getElementById(`gizmo-btn-${idx}`);
+  if(!b) return;
+  const used=p.gizmoUsedThisTurn;
+  b.textContent=`⚙ Gizmo${p.gizmoLevel>=3?' (x2)':''}${used?' — usado':''}`;
+  b.disabled=used;
+  b.style.opacity=used?'0.38':'1';
+  b.style.cursor=used?'not-allowed':'pointer';
+  // refresh inventory
+  const inv=document.getElementById(`ginv-${idx}`);
+  if(inv) inv.innerHTML=p.gizmoInventory.length>0
+    ?`<div style="margin-top:4px;font-size:8px;color:#44bbaa;letter-spacing:1px;">ENGENHOCAS: ${p.gizmoInventory.map(t=>t==='common'?'C':t==='rare'?'R':'E').join(' ')}</div>`
+    :'';
+}
+
+function refreshGizmoBtn(idx){ updateGizmoBtnState(idx); }
+
+// ===== TRACKS =====
+const stepLabels={
+  main:{1:'Início',2:'',3:'Monstro Vagante',4:'Token Raro',5:'Turba',6:'Token Épico',7:'Turba',8:'Token Épico',9:'Monstro Vagante'},
+  extra:{1:'Início',2:'Turba',3:'Monstro Vagante',4:'Turba'}
+};
+function buildTrack(cId,steps,isEx){
+  const c=document.getElementById(cId);
+  const line=c.querySelector('.track-line');
+  c.innerHTML=''; if(line) c.appendChild(line);
+  steps.forEach((s,i)=>{
+    const node=document.createElement('div');
+    node.className='step-node';
+    const icon=getIconForStep(s,isEx);
+    const label=(isEx?stepLabels.extra:stepLabels.main)[s]||'';
+    node.innerHTML=`<div class="step-circle" id="step-${isEx?'e':'m'}${s}" onclick="goToStep(${s},${isEx})">${s}</div><div class="step-node-icon">${icon}</div>${label?`<div class="step-node-label">${label}</div>`:''}`;
+    c.appendChild(node);
+    if(i<steps.length-1){const a=document.createElement('div');a.className='step-arrow';c.appendChild(a);}
+  });
+  updateVisuals();
+}
+function initTracks(){
+  buildTrack('main-track',[1,2,3,4,5,6,7,8,9],false);
+  buildTrack('extra-track',[1,2,3,4],true);
+}
+
+// ===== VISUALS =====
+function updateVisuals(){
+  for(let s=1;s<=9;s++){const el=document.getElementById(`step-m${s}`);if(!el)continue;el.className='step-circle';if(!isExtraTrack){if(s<currentStep)el.classList.add('passed');else if(s===currentStep)el.classList.add('active');}else el.classList.add('passed');}
+  for(let s=1;s<=4;s++){const el=document.getElementById(`step-e${s}`);if(!el)continue;el.className='step-circle';if(isExtraTrack){if(s<currentStep)el.classList.add('passed');else if(s===currentStep)el.classList.add('active');}}
+  document.getElementById('cnt-common').textContent=bag.common;
+  document.getElementById('cnt-rare').textContent=bag.rare;
+  document.getElementById('cnt-epic').textContent=bag.epic;
+}
+
+// ===== STEP LOGIC =====
+function goToStep(step,extraTrack){
+  if(extraTrack!==isExtraTrack||step!==currentStep+1) return;
+  advanceStep();
+}
+function advanceStep(){
+  const max=isExtraTrack?4:9;
+  if(currentStep>=max){
+    if(!isExtraTrack){
+      isExtraTrack=true;currentStep=0;
+      document.getElementById('extra-track-section').classList.add('visible');
+      updateVisuals();setTimeout(doStep,200);
+    }
+    return;
+  }
+  doStep();
+}
+function retreatStep(){
+  // Can't go back from step 1 of main track
+  if(currentStep<=1 && !isExtraTrack) return;
+
+  // If on extra track step 1, go back to main track step 9
+  if(isExtraTrack && currentStep<=1){
+    isExtraTrack=false;
+    currentStep=9;
+    document.getElementById('extra-track-section').classList.remove('visible');
+    updateVisuals();
+    setInfo('Um evento aconteceu e o marcador da escuridão retornou em 1 espaço. Os efeitos serão aplicados ao avançar novamente.');
+    return;
+  }
+
+  // Cancel any pending events/level-up in progress
+  pendingEvents=[];
+  processingEvent=false;
+  levelUpAsked=false;
+  document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+
+  currentStep--;
+  updateVisuals();
+  setInfo('Um evento aconteceu e o marcador da escuridão retornou em 1 espaço. Os efeitos serão aplicados ao avançar novamente.');
+}
+function doStep(){
+  levelUpAsked=false;
+  const max=isExtraTrack?4:9;
+  if(currentStep>=max) return;
+  currentStep++;
+  // Reset Gizmo usage for all Tinkerers each new turn
+  players.forEach((p,i)=>{
+    if(p.isTinkerer&&p.gizmoUsedThisTurn){
+      p.gizmoUsedThisTurn=false;
+      refreshGizmoBtn(i);
+    }
+  });
+  updateVisuals();
+  setInfo(`Turno ${currentStep} — ${isExtraTrack?'Trilha Extra':'Trilha Principal'}`);
+  if(currentStep===9&&!isExtraTrack) setTimeout(()=>document.getElementById('extra-track-section').classList.add('visible'),500);
+  const ev=isExtraTrack?extraEvents[currentStep]:mainEvents[currentStep];
+  pendingEvents=ev?[{step:currentStep,ev}]:[];
+  processPendingEvents();
+}
+
+// ===== EVENTS =====
+function processPendingEvents(){
+  if(processingEvent||pendingEvents.length===0){if(pendingEvents.length===0)checkLevelUp();return;}
+  processingEvent=true; triggerEvent(pendingEvents.shift().ev);
+}
+function triggerEvent(ev){
+  if(ev.type==='roaming'){
+    if(gameMode==='full'){
+      spawnRoaming(true);
+      document.getElementById('roaming-title').textContent='Monstro Vagante!';
+      document.getElementById('roaming-body').textContent='Monstro Vagante invocado automaticamente! Busque uma carta do baralho e coloque-a em jogo.';
+    } else {
+      document.getElementById('roaming-title').textContent='Monstro Vagante!';
+      document.getElementById('roaming-body').textContent='Busque uma carta do baralho de Monstros Vagantes e coloque-a em jogo seguindo as regras de aparição.';
+    }
+    document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
+    openOverlay('overlay-roaming');
+  } else if(ev.type==='horde'){
+    if(gameMode==='full'){
+      spawnHorde(true);
+      document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+    } else {
+      document.getElementById('roaming-title').textContent='Monstro de Turba!';
+      document.getElementById('roaming-body').textContent='Busque uma carta do baralho de Turba e coloque-a em jogo seguindo as regras de aparição da Turba.';
+      document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
+      openOverlay('overlay-roaming');
+    }
+  } else if(ev.type==='token'){
+    addToken(ev.token);
+  }
+}
+function afterEvent(){processingEvent=false;processPendingEvents();}
+
+// ===== TOKEN =====
+function addToken(type){
+  bag[type]++;updateVisuals();
+  const lb={rare:'Raro',epic:'Épico',common:'Comum'};
+  const ic={rare:'💠',epic:'💎',common:'📦'};
+  document.getElementById('token-icon').textContent=ic[type];
+  document.getElementById('token-popup-title').textContent=`Token ${lb[type]} Adicionado!`;
+  document.getElementById('token-popup-body').textContent=`1 token ${lb[type]} foi adicionado à sacola.`;
+  document.getElementById('btn-token-ok').onclick=()=>{closeOverlay('overlay-token');afterEvent();};
+  openOverlay('overlay-token');
+}
+
+// ===== LEVEL UP MULTI-HERO =====
+function checkLevelUp(){
+  if(!levelUpAsked&&pendingEvents.length===0){
+    levelUpAsked=true;
+    setTimeout(()=>buildLevelUpPopup(),300);
+  }
+}
+
+function buildLevelUpPopup(){
+  pendingLevelChoices={};
+  const list=document.getElementById('hero-levelup-list');
+  list.innerHTML='';
+  players.forEach((p,idx)=>{
+    const isMaxed=p.level>=MAX_LEVEL;
+    const item=document.createElement('div');
+    item.className='hero-select-item'+(isMaxed?' hero-maxed':'');
+    item.id=`hli-${idx}`;
+    let lvlBtns='';
+    for(let l=p.level+1;l<=MAX_LEVEL;l++){
+      lvlBtns+=`<button class="option-btn" onclick="event.stopPropagation();selectHeroLevel(${idx},${l},this)">${l}</button>`;
+    }
+    item.innerHTML=`
+      <div class="hero-item-top">
+        <div class="hero-item-name">${p.name}</div>
+        <div class="hero-item-lvl" id="hil-${idx}">Nível ${p.level}${isMaxed?' (máx)':''}</div>
+      </div>
+      <div class="hero-level-select" id="hls-${idx}">${lvlBtns}</div>`;
+    if(!isMaxed){
+      item.onclick=()=>{
+        const sel=document.getElementById(`hls-${idx}`);
+        sel.classList.toggle('visible');
+      };
+    }
+    list.appendChild(item);
+  });
+  updateLevelupSummary();
+  openOverlay('overlay-levelup-ask');
+}
+
+function selectHeroLevel(idx,lvl,btnEl){
+  pendingLevelChoices[idx]=lvl;
+  const container=document.getElementById(`hls-${idx}`);
+  container.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
+  btnEl.classList.add('selected');
+  const card=document.getElementById(`hli-${idx}`);
+  card.classList.add('hero-leveled');
+  const lbl=document.getElementById(`hil-${idx}`);
+  lbl.textContent=`→ Nível ${lvl}`;
+  lbl.classList.add('leveled');
+  updateLevelupSummary();
+}
+
+function updateLevelupSummary(){
+  const keys=Object.keys(pendingLevelChoices);
+  if(keys.length===0){document.getElementById('levelup-summary').textContent='';return;}
+  let r=0,e=0;
+  keys.forEach(idx=>{
+    const from=players[idx].level, to=pendingLevelChoices[idx];
+    for(let l=from+1;l<=to;l++)(levelRewards[l]||[]).forEach(t=>t==='rare'?r++:e++);
+  });
+  const parts=[];
+  if(r>0)parts.push(`${r} Raro${r>1?'s':''}`);
+  if(e>0)parts.push(`${e} Épico${e>1?'s':''}`);
+  document.getElementById('levelup-summary').innerHTML=parts.length>0
+    ?`→ Total à sacola: <strong style="color:var(--gold-light)">${parts.join(' + ')}</strong>`
+    :'→ Nenhum token novo para os níveis selecionados.';
+}
+
+function confirmAllLevelUps(){
+  closeOverlay('overlay-levelup-ask');
+  levelUpAsked=false;
+  const keys=Object.keys(pendingLevelChoices);
+  if(keys.length===0)return;
+  let totR=0,totE=0;
+  const lines=[];
+  keys.forEach(idx=>{
+    const p=players[idx];
+    const from=p.level,to=pendingLevelChoices[idx];
+    let r=0,e=0;
+    for(let l=from+1;l<=to;l++)(levelRewards[l]||[]).forEach(t=>t==='rare'?(r++,totR++):(e++,totE++));
+    updatePlayerLevel(Number(idx),to);
+    const pts=[];if(r>0)pts.push(`${r}R`);if(e>0)pts.push(`${e}E`);
+    lines.push(`${p.name} → Nível ${to}${pts.length>0?' ('+pts.join('+')+')'  :''}`);
+  });
+  bag.rare+=totR; bag.epic+=totE; updateVisuals();
+  const parts=[];if(totR>0)parts.push(`${totR} Raro${totR>1?'s':''}`);if(totE>0)parts.push(`${totE} Épico${totE>1?'s':''}`);
+  document.getElementById('levelup-result-icon').textContent=parts.length>0?'🏆':'⚔️';
+  document.getElementById('levelup-result-title').textContent='Heróis Evoluíram!';
+  document.getElementById('levelup-result-body').innerHTML=
+    lines.join('<br>')+(parts.length>0?`<br><br><strong style="color:var(--gold-light)">${parts.join(' + ')} adicionado${(totR+totE)>1?'s':''} à sacola.</strong>`:'<br><br>Nenhum token novo.');
+
+  // Queue gizmo upgrades: if hero jumped directly to 3, ask only about lv3 (skip lv2 question)
+  pendingGizmoUpgrades=[];
+  keys.forEach(idx=>{
+    const p=players[idx]; // level already updated
+    if(!p.isTinkerer) return;
+    if(p.level>=3 && p.gizmoLevel<3){
+      // Only ask about lv3 (most relevant), skip lv2 if jumping straight to 3
+      pendingGizmoUpgrades.push({idx:Number(idx),targetGizmoLv:3});
+    } else if(p.level>=2 && p.gizmoLevel<2){
+      pendingGizmoUpgrades.push({idx:Number(idx),targetGizmoLv:2});
+    }
+  });
+
+  document.getElementById('btn-levelup-result-ok').onclick=()=>{
+    closeOverlay('overlay-levelup-result');
+    processGizmoUpgrades();
+  };
+  openOverlay('overlay-levelup-result');
+  pendingLevelChoices={};
+}
+
+// ===== GIZMO =====
+function useGizmo(idx){
+  const p=players[idx];
+  if(!p.isTinkerer||p.gizmoUsedThisTurn) return;
+  const total=bag.common+bag.rare+bag.epic;
+  if(total===0){openOverlay('overlay-empty');return;}
+
+  if(p.gizmoLevel>=3){
+    // Draw 2 tokens, player chooses one
+    const drawn=[];
+    for(let i=0;i<2;i++){
+      const t2=bag.common+bag.rare+bag.epic;
+      if(t2===0) break;
+      const r=Math.floor(Math.random()*t2);
+      drawn.push(r<bag.common?'common':r<bag.common+bag.rare?'rare':'epic');
+    }
+    showGizmoPick(idx,drawn);
+  } else {
+    // Draw 1 token normally
+    const r=Math.floor(Math.random()*total);
+    const type=r<bag.common?'common':r<bag.common+bag.rare?'rare':'epic';
+    bag[type]--;
+    updateVisuals();
+    p.gizmoInventory.push(type);
+    p.gizmoUsedThisTurn=true;
+    refreshGizmoBtn(idx);
+    showGizmoResult(p.name,type);
+  }
+}
+
+let gizmoPickIdx=-1, gizmoPickTokens=[];
+function showGizmoPick(idx,drawn){
+  gizmoPickIdx=idx; gizmoPickTokens=drawn;
+  const labels={common:'Comum 📦',rare:'Raro 💠',epic:'Épico 💎'};
+  const colors={common:'#c8a96e',rare:'#6699dd',epic:'#bb77ee'};
+  let btns=drawn.map((t,i)=>`<button class="option-btn" style="color:${colors[t]};border-color:${colors[t]};" onclick="pickGizmoToken(${i})">${labels[t]}</button>`).join('');
+  document.getElementById('gizmo-pick-title').textContent=`${players[idx].name} — Escolha uma Engenhoca`;
+  document.getElementById('gizmo-pick-options').innerHTML=btns;
+  openOverlay('overlay-gizmo-pick');
+}
+
+function pickGizmoToken(choiceIdx){
+  const p=players[gizmoPickIdx];
+  const chosen=gizmoPickTokens[choiceIdx];
+  const other=gizmoPickTokens[1-choiceIdx];
+  // Subtract chosen from bag, keep other in bag
+  bag[chosen]--;
+  updateVisuals();
+  p.gizmoInventory.push(chosen);
+  p.gizmoUsedThisTurn=true;
+  closeOverlay('overlay-gizmo-pick');
+  refreshGizmoBtn(gizmoPickIdx);
+  showGizmoResult(p.name,chosen,other);
+  gizmoPickIdx=-1; gizmoPickTokens=[];
+}
+
+function showGizmoResult(name,kept,returned){
+  const labels={common:'Comum',rare:'Raro',epic:'Épico'};
+  const icons={common:'📦',rare:'💠',epic:'💎'};
+  let body=`${name} obteve uma Engenhoca ${labels[kept]}! ${icons[kept]}`;
+  if(returned) body+=`\nToken ${labels[returned]} devolvido à sacola.`;
+  document.getElementById('gizmo-result-body').textContent=body;
+  openOverlay('overlay-gizmo-result');
+}
+
+// ===== GIZMO UPGRADE QUEUE =====
+let pendingGizmoUpgrades=[];
+function processGizmoUpgrades(){
+  if(pendingGizmoUpgrades.length===0) return; // nothing to do, just finish
+  const {idx,targetGizmoLv}=pendingGizmoUpgrades.shift();
+  const p=players[idx];
+  // Skip if already at or above this level
+  if(p.gizmoLevel>=targetGizmoLv){ processGizmoUpgrades(); return; }
+  document.getElementById('gizmo-upgrade-name').textContent=p.name;
+  document.getElementById('gizmo-upgrade-level').textContent=targetGizmoLv;
+  document.getElementById('gizmo-upgrade-hint').textContent=targetGizmoLv===3
+    ?'No Nível 3, o Gizmo retira 2 tokens da sacola e você escolhe com qual ficar!'
+    :'';
+  document.getElementById('btn-gizmo-yes').onclick=()=>{
+    p.gizmoLevel=targetGizmoLv;
+    closeOverlay('overlay-gizmo-upgrade');
+    renderPlayersSidebar();
+    processGizmoUpgrades();
+  };
+  document.getElementById('btn-gizmo-no').onclick=()=>{
+    closeOverlay('overlay-gizmo-upgrade');
+    processGizmoUpgrades();
+  };
+  openOverlay('overlay-gizmo-upgrade');
+}
+
+// ===== TINKERER INVENTORY =====
+let tinvCurrentIdx=-1;
+const useQty={common:0,rare:0,epic:0};
+
+function showTinkererInventory(idx){
+  tinvCurrentIdx=idx;
+  const p=players[idx];
+  const total=p.gizmoInventory.length;
+  document.getElementById('tinv-name').textContent=`${p.name} — Engenhocas`;
+  refreshTinvDisplay(idx);
+  document.getElementById('tinv-use-btn').style.display=total>0?'block':'none';
+  openOverlay('overlay-tinv');
+}
+
+function refreshTinvDisplay(idx){
+  const p=players[idx];
+  const counts={common:0,rare:0,epic:0};
+  p.gizmoInventory.forEach(t=>counts[t]++);
+  const total=p.gizmoInventory.length;
+  document.getElementById('tinv-total').textContent=total===0?'Nenhuma engenhoca ainda.':`${total} engenhoca${total>1?'s':''} no inventário`;
+  document.getElementById('tinv-use-btn').style.display=total>0?'block':'none';
+  const grid=document.getElementById('tinv-grid');
+  grid.innerHTML='';
+  if(total===0){
+    grid.innerHTML='<span style="font-family:\'IM Fell English\',serif;font-size:13px;color:var(--parchment);opacity:0.5;font-style:italic;">Vazio</span>';
+  } else {
+    const colors={common:{bg:'#7a5c2e',glow:'rgba(200,169,110,0.5)',label:'C',name:'Comum'},rare:{bg:'#2a5fa8',glow:'rgba(102,153,221,0.6)',label:'R',name:'Raro'},epic:{bg:'#7a3db0',glow:'rgba(187,119,238,0.7)',label:'E',name:'Épico'}};
+    p.gizmoInventory.forEach(t=>{
+      const c=colors[t];
+      const el=document.createElement('div');
+      el.style.cssText=`width:32px;height:32px;border-radius:50%;background:${c.bg};border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:10px;font-weight:700;color:#fff;box-shadow:0 0 7px ${c.glow};flex-shrink:0;cursor:default;`;
+      el.title=c.name; el.textContent=c.label;
+      grid.appendChild(el);
+    });
+  }
+  const rows=document.getElementById('tinv-rows');
+  rows.innerHTML='';
+  [{key:'common',label:'Comum',color:'#c8a96e'},{key:'rare',label:'Raro',color:'#6699dd'},{key:'epic',label:'Épico',color:'#bb77ee'}].forEach(t=>{
+    if(counts[t.key]===0) return;
+    rows.innerHTML+=`<div style="font-family:'Cinzel',serif;font-size:12px;color:${t.color};display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--dark-border);"><span>${t.label}</span><span style="font-weight:700;">${counts[t.key]}</span></div>`;
+  });
+}
+
+function openUseGadgets(){
+  const p=players[tinvCurrentIdx];
+  const counts={common:0,rare:0,epic:0};
+  p.gizmoInventory.forEach(t=>counts[t]++);
+  useQty.common=0; useQty.rare=0; useQty.epic=0;
+  const container=document.getElementById('use-gadget-rows');
+  container.innerHTML='';
+  const types=[
+    {key:'common',label:'Comum',color:'#c8a96e',border:'#7a5c2e'},
+    {key:'rare',  label:'Raro', color:'#6699dd',border:'#2a5fa8'},
+    {key:'epic',  label:'Épico',color:'#bb77ee',border:'#7a3db0'},
+  ];
+  types.forEach(t=>{
+    if(counts[t.key]===0) return;
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--dark-border);';
+    row.innerHTML=`
+      <div style="font-family:'Cinzel',serif;font-size:12px;color:${t.color};flex:1;">${t.label} <span style="opacity:0.5;">(${counts[t.key]} disp.)</span></div>
+      <button onclick="changeUseQty('${t.key}',-1)" style="width:30px;height:30px;border-radius:50%;background:var(--dark-card);border:1px solid ${t.border};color:${t.color};font-size:18px;cursor:pointer;line-height:1;">−</button>
+      <div id="use-qty-${t.key}" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:${t.color};min-width:26px;text-align:center;">0</div>
+      <button onclick="changeUseQty('${t.key}',1,${counts[t.key]})" style="width:30px;height:30px;border-radius:50%;background:var(--dark-card);border:1px solid ${t.border};color:${t.color};font-size:18px;cursor:pointer;line-height:1;">+</button>`;
+    container.appendChild(row);
+  });
+  document.getElementById('use-gadget-summary').textContent='';
+  openOverlay('overlay-use-gadgets');
+}
+
+function changeUseQty(type,delta,max){
+  const p=players[tinvCurrentIdx];
+  const counts={common:0,rare:0,epic:0};
+  p.gizmoInventory.forEach(t=>counts[t]++);
+  const cap=max!==undefined?max:counts[type];
+  useQty[type]=Math.max(0,Math.min(cap,(useQty[type]||0)+delta));
+  const el=document.getElementById(`use-qty-${type}`);
+  if(el) el.textContent=useQty[type];
+  const total=useQty.common+useQty.rare+useQty.epic;
+  document.getElementById('use-gadget-summary').textContent=total>0
+    ?`→ ${total} engenhoca${total>1?'s':''} serão devolvidas à sacola.`:'';
+}
+
+function confirmUseGadgets(){
+  const total=useQty.common+useQty.rare+useQty.epic;
+  if(total===0){closeOverlay('overlay-use-gadgets');return;}
+  const p=players[tinvCurrentIdx];
+  const labels={common:'Comum',rare:'Raro',epic:'Épico'};
+  const returned=[];
+  ['common','rare','epic'].forEach(type=>{
+    let qty=useQty[type]; if(qty===0) return;
+    let removed=0;
+    p.gizmoInventory=p.gizmoInventory.filter(t=>{
+      if(t===type&&removed<qty){removed++;return false;} return true;
+    });
+    bag[type]+=qty;
+    returned.push(`${qty}x ${labels[type]}`);
+    useQty[type]=0;
+  });
+  updateVisuals();
+  closeOverlay('overlay-use-gadgets');
+  refreshTinvDisplay(tinvCurrentIdx);
+  renderPlayersSidebar();
+  document.getElementById('gizmo-result-body').textContent=`${p.name} utilizou ${returned.join(', ')}.
+Os tokens foram devolvidos à sacola.`;
+  openOverlay('overlay-gizmo-result');
+}
+
+// ===== DRAW =====
+function drawFromBag(){
+  const total=bag.common+bag.rare+bag.epic;
+  if(total===0){openOverlay('overlay-empty');return;}
+  const roll=Math.floor(Math.random()*total);
+  const type=roll<bag.common?'common':roll<bag.common+bag.rare?'rare':'epic';
+  const d={common:{label:'Tesouro Comum',cls:'result-common',icon:'📦',flavor:'Um item simples mas útil para a jornada.'},rare:{label:'Tesouro Raro',cls:'result-rare',icon:'💠',flavor:'Um item de grande valor! Os heróis ficam impressionados.'},epic:{label:'Tesouro Épico',cls:'result-epic',icon:'💎',flavor:'Lendário! Um item de poder extraordinário é revelado.'}}[type];
+  document.getElementById('draw-icon').textContent=d.icon;
+  document.getElementById('draw-result-area').innerHTML=`<div class="token-result ${d.cls}">${d.label}</div>`;
+  document.getElementById('draw-flavor').textContent=d.flavor;
+  openOverlay('overlay-draw');
+}
+
+// ===== BAG INSPECT =====
+function openBagInspect(){
+  const total=bag.common+bag.rare+bag.epic;
+  document.getElementById('inspect-total').textContent=total===0?'A sacola está vazia.':`Total: ${total} tokens`;
+  const rowsEl=document.getElementById('inspect-rows');rowsEl.innerHTML='';
+  [{key:'common',label:'Comum',color:'#c8a96e',bg:'linear-gradient(135deg,#3a2c10,#1e1808)',border:'#7a5c2e',dot:'#7a5c2e'},
+   {key:'rare',  label:'Raro', color:'#6699dd',bg:'linear-gradient(135deg,#0e1e38,#080e1e)',border:'#2a5fa8',dot:'#2a5fa8'},
+   {key:'epic',  label:'Épico',color:'#bb77ee',bg:'linear-gradient(135deg,#2a1040,#140820)',border:'#7a3db0',dot:'#7a3db0'}].forEach(t=>{
+    const count=bag[t.key],pct=total>0?Math.round(count/total*100):0;
+    const row=document.createElement('div');
+    row.style.cssText=`background:${t.bg};border:1px solid ${t.border};border-radius:8px;padding:8px 11px;display:flex;align-items:center;gap:9px;`;
+    row.innerHTML=`<div style="width:10px;height:10px;border-radius:50%;background:${t.dot};flex-shrink:0;box-shadow:0 0 5px ${t.dot};"></div><div style="flex:1;"><div style="font-family:'Cinzel',serif;font-size:10px;color:${t.color};letter-spacing:1px;">${t.label}</div><div style="margin-top:3px;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${t.dot};border-radius:2px;"></div></div></div><div style="text-align:right;flex-shrink:0;"><span style="font-family:'Cinzel Decorative',serif;font-size:19px;font-weight:700;color:${t.color};">${count}</span><div style="font-size:8px;color:${t.color};opacity:0.55;letter-spacing:1px;">${pct}%</div></div>`;
+    rowsEl.appendChild(row);
+  });
+  const grid=document.getElementById('inspect-grid');grid.innerHTML='';
+  const all=[...Array(bag.common).fill({c:'#7a5c2e',g:'rgba(200,169,110,0.5)',l:'C'}),...Array(bag.rare).fill({c:'#2a5fa8',g:'rgba(102,153,221,0.6)',l:'R'}),...Array(bag.epic).fill({c:'#7a3db0',g:'rgba(187,119,238,0.7)',l:'E'})];
+  if(all.length===0){grid.innerHTML='<span style="font-family:\'IM Fell English\',serif;font-size:12px;color:var(--parchment);opacity:0.5;font-style:italic;">Nenhum token</span>';}
+  else all.forEach(tok=>{const el=document.createElement('div');el.style.cssText=`width:24px;height:24px;border-radius:50%;background:${tok.c};border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:8px;font-weight:700;color:#fff;box-shadow:0 0 5px ${tok.g};flex-shrink:0;`;el.textContent=tok.l;grid.appendChild(el);});
+  openOverlay('overlay-inspect');
+}
+
+// ===== MONSTER DATA (3 tiers) =====
+function getHordeTier(){
+  const maxLvl=players.reduce((m,p)=>Math.max(m,p.level),1);
+  if(maxLvl>=5) return 3; if(maxLvl>=3) return 2; return 1;
+}
+function getTierStyle(tier){
+  if(tier===3) return {border:'#cc2222',badge:'#cc2222',label:'Nível 5+',glow:'rgba(200,30,30,0.3)',rewards:2};
+  if(tier===2) return {border:'#cc6600',badge:'#cc6600',label:'Nível 3-4',glow:'rgba(200,100,0,0.25)',rewards:1};
+  return {border:'#c9a84c',badge:'#c9a84c',label:'Nível 1-2',glow:'rgba(200,160,60,0.2)',rewards:1};
+}
+
+const HORDES_ALL=[
+  {id:'satyr',name:'Sátiros',icon:'🐐',color:'#886633',tiers:[
+    {hp:3,defense:1,defenseType:'dice',  specialDesc:'Garra: +1 dado no ataque. Veja as habilidades especiais na carta de referência.'},
+    {hp:4,defense:2,defenseType:'blue',  specialDesc:'Garra: +2 dados no ataque. Veja as habilidades especiais na carta de referência.'},
+    {hp:6,defense:4,defenseType:'blue',  specialDesc:'Garra: +2 dados no ataque. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'imp',name:'Diabrete Infernal',icon:'😈',color:'#883333',tiers:[
+    {hp:3,defense:1,defenseType:'shield',specialDesc:'Garra: mata um lacaio — cada herói na zona sofre 1 de dano. Veja as habilidades especiais na carta de referência.'},
+    {hp:4,defense:1,defenseType:'blue',  specialDesc:'Garra: mata um lacaio — cada herói na zona sofre 2 de dano. Veja as habilidades especiais na carta de referência.'},
+    {hp:5,defense:3,defenseType:'blue',  specialDesc:'Garra: mata um lacaio — cada herói na zona sofre 3 de dano. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'gargoyle',name:'Gárgulas',icon:'🗿',color:'#666677',tiers:[
+    {hp:2,defense:1,defenseType:'dice',  specialDesc:'Garra: +1 dado de defesa extra. Veja as habilidades especiais na carta de referência.'},
+    {hp:3,defense:2,defenseType:'blue',  specialDesc:'Garra: +1 dado de defesa extra. Veja as habilidades especiais na carta de referência.'},
+    {hp:6,defense:3,defenseType:'blue',  specialDesc:'Garra: +2 dados de defesa extra. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'demon',name:'Demônios',icon:'👿',color:'#992222',tiers:[
+    {hp:3,defense:1,defenseType:'shield',specialDesc:'Garra: herói em ataque/defesa descarta 1 de mana. Veja as habilidades especiais na carta de referência.'},
+    {hp:4,defense:2,defenseType:'dice',  specialDesc:'Garra: herói em combate descarta 1 de mana. Veja as habilidades especiais na carta de referência.'},
+    {hp:6,defense:4,defenseType:'blue',  specialDesc:'Garra: herói em combate descarta 1 de mana. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'undead',name:'Mortos Vivos',icon:'🧟',color:'#446644',tiers:[
+    {hp:4,defense:0,defenseType:'none',  specialDesc:'Garra: +1 dado amarelo no ataque, mas sofre 2 de dano. Veja as habilidades especiais na carta de referência.'},
+    {hp:5,defense:0,defenseType:'none',  specialDesc:'Garra: +2 dados amarelos no ataque, mas sofre 2 de dano. Veja as habilidades especiais na carta de referência.'},
+    {hp:8,defense:0,defenseType:'none',  specialDesc:'Garra: +1 dado amarelo +1 dado laranja no ataque, mas sofre 2 de dano. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'skeleton',name:'Esqueletos',icon:'💀',color:'#aaaaaa',tiers:[
+    {hp:2,defense:1,defenseType:'dice',  specialDesc:'Garra: adiciona 1 servo lacaio — a menos que herói descarte 1 mana. Veja as habilidades especiais na carta de referência.'},
+    {hp:3,defense:2,defenseType:'blue',  specialDesc:'Garra: adiciona 1 servo lacaio — a menos que herói descarte 1 mana. Veja as habilidades especiais na carta de referência.'},
+    {hp:5,defense:4,defenseType:'blue',  specialDesc:'Garra: adiciona 1 servo lacaio — a menos que herói descarte 2 mana. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'fallen',name:'Anjos Caídos',icon:'🪽',color:'#7755aa',tiers:[
+    {hp:2,defense:2,defenseType:'dice',  specialDesc:'Garra: herói fica com -1 de defesa. Veja as habilidades especiais na carta de referência.'},
+    {hp:3,defense:3,defenseType:'blue',  specialDesc:'Garra: herói fica com -2 de defesa. Veja as habilidades especiais na carta de referência.'},
+    {hp:5,defense:2,defenseType:'blue',  specialDesc:'Garra: herói fica com -2 de defesa. Veja as habilidades especiais na carta de referência.'},
+  ]},
+  {id:'fire',name:'Entidades do Fogo',icon:'🔥',color:'#cc5500',tiers:[
+    {hp:3,defense:1,defenseType:'dice',  specialDesc:'Garra: adiciona 1 token de fogo ao herói no combate. Veja as habilidades especiais na carta de referência.'},
+    {hp:4,defense:2,defenseType:'blue',  specialDesc:'Garra: adiciona 1 token de fogo ao herói no combate. Veja as habilidades especiais na carta de referência.'},
+    {hp:7,defense:3,defenseType:'blue',  specialDesc:'Garra: adiciona 1 token de fogo ao herói no combate. Veja as habilidades especiais na carta de referência.'},
+  ]},
+];
+
+const ROAMINGS_ALL=[
+  {id:'lyidan',name:'Lyidan',icon:'🧙',color:'#4466aa',tiers:[
+    {hp:7, defense:'2 dados + 1 preto', attack:'Corpo a corpo: 1 laranja + 2 pretos',
+     specialDesc:'C.a.C: 1 dado laranja + 2 pretos. Defesa: 2 dados + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:0,rareMsg:'Busque 1 item Raro do deck.'},
+    {hp:10,defense:'2 dados azuis + 1 preto',attack:'Corpo a corpo: 2 laranjas + 1 preto',
+     specialDesc:'C.a.C: 2 laranjas + 1 preto. Defesa: 2 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:1,rareMsg:'Busque 1 item Épico do deck.'},
+    {hp:12,defense:'4 dados azuis + 1 preto',attack:'C.a.C: 2 amarelos + 2 laranjas + 1 preto',
+     specialDesc:'C.a.C: 2 amarelos + 2 laranjas + 1 preto. Defesa: 4 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:0,epicDeck:3,rareMsg:''},
+  ]},
+  {id:'carnical',name:'O Carniçal',icon:'🐺',color:'#887733',tiers:[
+    {hp:5, defense:'2 dados + 1 preto',attack:'Corpo a corpo: 1 laranja + 1 preto',
+     specialDesc:'C.a.C: 1 laranja + 1 preto. Defesa: 2 dados + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:0,rareMsg:'Busque 1 item Raro do deck.'},
+    {hp:8, defense:'3 dados azuis + 1 preto',attack:'Corpo a corpo: 2 laranjas + 2 pretos',
+     specialDesc:'C.a.C: 2 laranjas + 2 pretos. Defesa: 3 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:1,rareMsg:'Busque 1 item Épico do deck.'},
+    {hp:10,defense:'4 dados azuis + 1 preto',attack:'Corpo a corpo: 3 laranjas + 3 pretos',
+     specialDesc:'C.a.C: 3 laranjas + 3 pretos. Defesa: 4 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:0,epicDeck:3,rareMsg:''},
+  ]},
+  {id:'andra',name:'Andra',icon:'🏹',color:'#336688',tiers:[
+    {hp:5, defense:'2 dados azuis + 1 preto',attack:'C.a.C e Dist: 1 amarelo + 1 preto',
+     specialDesc:'Corpo a corpo e distância: 1 amarelo + 1 preto. Defesa: 2 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:0,rareMsg:'Busque 1 item Raro do deck.'},
+    {hp:7, defense:'3 dados azuis + 1 preto',attack:'C.a.C e Dist: 1 amarelo + 1 laranja + 1 preto',
+     specialDesc:'Corpo a corpo e distância: 1 amarelo + 1 laranja + 1 preto. Defesa: 3 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:1,rareMsg:'Busque 1 item Épico do deck.'},
+    {hp:10,defense:'5 dados azuis + 1 preto',attack:'C.a.C e Dist: 1 amarelo + 2 laranjas + 1 preto',
+     specialDesc:'Corpo a corpo e distância: 1 amarelo + 2 laranjas + 1 preto. Defesa: 5 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:0,epicDeck:3,rareMsg:''},
+  ]},
+  {id:'ytheria',name:'Ytheria Rainha Morta Viva',icon:'👸',color:'#885588',tiers:[
+    {hp:4, defense:'1 dado + 1 preto',attack:'C.a.C: 1 amarelo | Dist: 1 amarelo + 1 preto',
+     specialDesc:'Corpo a corpo: 1 amarelo. Distância: 1 amarelo + 1 preto. Defesa: 1 dado + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:0,rareMsg:'Busque 1 item Raro do deck.'},
+    {hp:6, defense:'2 dados azuis + 1 preto',attack:'C.a.C: 1 laranja | Dist: 1 amarelo + 1 laranja + 1 preto',
+     specialDesc:'Corpo a corpo: 1 laranja. Distância: 1 amarelo + 1 laranja + 1 preto. Defesa: 2 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:2,epicDeck:1,rareMsg:'Busque 1 item Épico do deck.'},
+    {hp:8, defense:'4 dados azuis + 1 preto',attack:'C.a.C: 2 amarelos + 1 laranja | Dist: 2 amarelos + 1 laranja + 1 preto',
+     specialDesc:'Corpo a corpo: 2 amarelos + 1 laranja. Distância: 2 amarelos + 1 laranja + 1 preto. Defesa: 4 azuis + 1 preto. Veja as habilidades especiais na carta de referência.',
+     xpKiller:5,xpOthers:4,bagRewards:0,epicDeck:3,rareMsg:''},
+  ]},
+];
+
+function defenseLabel(t){
+  if(!t) return 'Sem defesa';
+  if(typeof t.defense==='string') return t.defense;
+  if(t.defense===0) return 'Sem defesa';
+  const type=t.defenseType==='shield'?'escudo':t.defenseType==='blue'?'azul':'defesa';
+  return `${t.defense} dado${t.defense>1?'s':''} ${type}`;
+}
+
+let activeMonsters=[], monsterIdCounter=0;
+let currentAttackMonsterId=null, currentAttackDmg=1, currentAttackPlayerIdx=null;
+
+function getActiveMonsterNames(){ return activeMonsters.filter(m=>!m.defeated).map(m=>m.name); }
+
+// ===== SPAWN =====
+function openSpawnMonster(){ openOverlay('overlay-spawn-type'); }
+
+function spawnRoaming(fromTrack){
+  if(!fromTrack) closeOverlay('overlay-spawn-type');
+  const tier=getHordeTier();
+  const ts=getTierStyle(tier);
+  const activeNames=getActiveMonsterNames();
+  const available=ROAMINGS_ALL.filter(r=>!activeNames.includes(r.name));
+  if(available.length===0){ setInfo('Todos os Monstros Vagantes já estão ativos!'); if(fromTrack){afterEvent();} return; }
+  const base=available[Math.floor(Math.random()*available.length)];
+  const t=base.tiers[tier-1];
+  const id=++monsterIdCounter;
+  activeMonsters.push({
+    uid:id, type:'roaming',
+    name:base.name, icon:base.icon, color:base.color,
+    tier, tierStyle:ts,
+    leader:{hp:t.hp,maxHp:t.hp},
+    minions:[],
+    specialDesc:t.specialDesc, attack:t.attack, defense:t.defense,
+    xpKiller:t.xpKiller, xpOthers:t.xpOthers,
+    bagRewards:t.bagRewards, epicDeck:t.epicDeck, rareMsg:t.rareMsg,
+    defeated:false, killedBy:null,
+  });
+  renderActiveMonsters();
+  if(fromTrack){
+    document.getElementById('roaming-title').textContent=`${base.name} Aparece!`;
+    document.getElementById('roaming-body').textContent=`${base.name} surgiu das trevas! ❤️ ${t.hp} vida | 🛡 ${t.defense} | ⚔️ ${t.attack}`;
+    document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
+    openOverlay('overlay-roaming');
+  }
+}
+
+function spawnHorde(fromTrack){
+  if(!fromTrack) closeOverlay('overlay-spawn-type');
+  const tier=getHordeTier();
+  const ts=getTierStyle(tier);
+  const activeNames=getActiveMonsterNames();
+  const available=HORDES_ALL.filter(h=>!activeNames.includes(h.name));
+  if(available.length===0){ setInfo('Todas as Turbas únicas já estão ativas!'); if(fromTrack){afterEvent();} return; }
+  const base=available[Math.floor(Math.random()*available.length)];
+  const t=base.tiers[tier-1];
+  const count=players.length||1;
+  const minions=Array.from({length:count},()=>({hp:t.hp,maxHp:t.hp,defense:t.defense}));
+  const id=++monsterIdCounter;
+  activeMonsters.push({
+    uid:id, type:'horde',
+    name:base.name, icon:base.icon, color:base.color,
+    tier, tierStyle:ts,
+    leader:{hp:t.hp,maxHp:t.hp,defense:t.defense,defenseType:t.defenseType},
+    minions, specialDesc:t.specialDesc, defenseType:t.defenseType,
+    defeated:false, killedBy:null, rewards:ts.rewards, roamingEpicDeck:0,
+  });
+  renderActiveMonsters();
+  const defStr=defenseLabel(t);
+  document.getElementById('horde-spawn-icon').textContent=base.icon;
+  document.getElementById('horde-spawn-name').textContent=`${base.name} Invocados! ${ts.label}`;
+  document.getElementById('horde-spawn-body').innerHTML=
+    `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${ts.label}</span><br>`+
+    `<strong style="color:var(--gold-light);">❤️ Vida:</strong> ${t.hp} por unidade<br>`+
+    `<strong style="color:var(--gold-light);">🛡 Defesa:</strong> ${defStr}<br>`+
+    `<strong style="color:var(--gold-light);">⚔️ Poder Especial:</strong> ${t.specialDesc}<br><br>`+
+    `<strong style="color:#dd6666;">👥 Lacaios:</strong> ${count} (1 por jogador)<br>`+
+    `<strong style="color:#dd6666;">👑 Líder:</strong> aparece após todos os lacaios morrerem<br>`+
+    (ts.rewards>1?`<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${ts.rewards} tesouros ao derrotar!`:'');
+  if(fromTrack){
+    document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+  }
+  openOverlay('overlay-horde-spawned');
+}
+
+// ===== MONSTER INFO POPUP =====
+function showMonsterInfo(uid){
+  const m=activeMonsters.find(x=>x.uid===uid); if(!m) return;
+  const ts=m.tierStyle||getTierStyle(1);
+  const badge=`<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${ts.label}</span>`;
+  let html=badge+'<br>';
+  if(m.type==='roaming'){
+    html+=`<strong style="color:var(--gold-light);">❤️ Vida atual:</strong> ${m.leader.hp} / ${m.leader.maxHp}<br>`;
+    html+=`<strong style="color:var(--gold-light);">🛡 Defesa:</strong> ${m.defense||'—'}<br>`;
+    html+=`<strong style="color:var(--gold-light);">⚔️ Ataque:</strong> ${m.attack||'—'}<br>`;
+    html+=`<strong style="color:#88ddaa;">🌟 XP:</strong> Matador +${m.xpKiller} | Outros +${m.xpOthers}<br>`;
+    const rwd=m.bagRewards>0?`${m.bagRewards} tesouro${m.bagRewards>1?'s':''} da sacola`:'';
+    const epc=m.epicDeck>0?`${m.epicDeck} Épico${m.epicDeck>1?'s':''} do deck`:'';
+    const rare=m.rareMsg||'';
+    html+=`<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${[rwd,epc,rare].filter(Boolean).join(' + ')}<br>`;
+  } else {
+    html+=`<strong style="color:var(--gold-light);">❤️ Vida/unidade:</strong> ${m.leader.maxHp}<br>`;
+    html+=`<strong style="color:var(--gold-light);">🛡 Defesa:</strong> ${defenseLabel({defense:m.leader.defense,defenseType:m.defenseType})}<br>`;
+    html+=`<strong style="color:#88ddaa;">🌟 XP:</strong> Matador +3 | Outros +2<br>`;
+    html+=`<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${m.rewards||1} tesouro${(m.rewards||1)>1?'s':''} da sacola<br>`;
+  }
+  html+=`<br><em style="font-family:'IM Fell English',serif;font-size:13px;opacity:0.8;">${m.specialDesc}</em>`;
+  document.getElementById('minfo-icon').textContent=m.icon;
+  document.getElementById('minfo-name').textContent=m.name;
+  document.getElementById('minfo-body').innerHTML=html;
+  openOverlay('overlay-minfo');
+}
+
+// ===== RENDER ACTIVE MONSTERS =====
+function renderActiveMonsters(){
+  const panel=document.getElementById('active-monsters-panel');
+  const alive=activeMonsters.filter(m=>!m.defeated);
+  panel.style.display=alive.length>0?'flex':'none';
+  panel.innerHTML=alive.length>0
+    ?`<div style="font-size:9px;letter-spacing:2px;color:#dd6666;text-transform:uppercase;text-align:center;border-top:1px solid #7a2a2a;padding-top:10px;">⚔ Monstros Ativos</div>`:'';
+
+  alive.forEach(m=>{
+    const ts=m.tierStyle||getTierStyle(1);
+    const card=document.createElement('div');
+    card.style.cssText=`background:linear-gradient(135deg,#1a0e0e,#0e0808);border:2px solid ${ts.border};border-radius:10px;padding:12px 14px;position:relative;box-shadow:0 0 10px ${ts.glow};cursor:pointer;`;
+    card.onclick=(e)=>{ if(e.target.tagName!=='BUTTON') showMonsterInfo(m.uid); };
+    const badge=`<span style="font-size:8px;padding:1px 6px;border-radius:3px;background:${ts.badge};color:#fff;font-family:'Cinzel',serif;letter-spacing:1px;">${ts.label}</span>`;
+
+    if(m.type==='roaming'){
+      const hpPct=Math.round(m.leader.hp/m.leader.maxHp*100);
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:20px;">${m.icon}</span>
+          <div style="flex:1;">
+            <div style="font-family:'Cinzel',serif;font-size:11px;color:#ee8888;">${m.name} ${badge}</div>
+            <div style="font-size:9px;color:var(--parchment);opacity:0.5;margin-top:1px;">Toque para ver atributos</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;">
+          <span style="font-size:9px;width:18px;">❤️</span>
+          <div style="flex:1;height:7px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${hpPct}%;background:#cc3333;border-radius:3px;"></div>
+          </div>
+          <span style="font-size:10px;color:#ee8888;min-width:28px;text-align:right;">${m.leader.hp}❤</span>
+        </div>
+        <div style="display:flex;gap:5px;">
+          <button onclick="event.stopPropagation();openAttackRoaming(${m.uid})" style="width:100%;font-family:'Cinzel',serif;font-size:9px;padding:6px;border-radius:6px;cursor:pointer;background:linear-gradient(135deg,#2a1008,#180804);border:1px solid ${ts.border};color:#ee8855;letter-spacing:1px;text-transform:uppercase;">⚔ Atacar</button>
+        </div>`;
+    } else {
+      const minionBars=m.minions.map((mn,i)=>{
+        const pct=mn.hp<=0?0:Math.round(mn.hp/mn.maxHp*100);
+        const dead=mn.hp<=0;
+        return `<div style="display:flex;align-items:center;gap:5px;opacity:${dead?0.3:1};">
+          <div style="font-size:9px;color:var(--parchment);width:14px;">L${i+1}</div>
+          <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${dead?'#444':m.color};border-radius:3px;"></div>
+          </div>
+          <div style="font-size:9px;color:${dead?'#555':m.color};min-width:24px;text-align:right;">${dead?'☠':mn.hp+'❤'}</div>
+        </div>`;
+      }).join('');
+      const allDead=m.minions.every(mn=>mn.hp<=0);
+      const lPct=Math.round(m.leader.hp/m.leader.maxHp*100);
+      const lDead=m.leader.hp<=0;
+      card.innerHTML=`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-size:20px;">${m.icon}</span>
+          <div style="flex:1;">
+            <div style="font-family:'Cinzel',serif;font-size:11px;color:${m.color};">${m.name} ${badge}</div>
+            <div style="font-size:9px;color:var(--parchment);opacity:0.5;margin-top:1px;">Toque para ver habilidades</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">${minionBars}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:8px;${allDead?'':'opacity:0.35;'}">
+          <div style="font-size:9px;color:#f0d080;width:28px;">👑</div>
+          <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${lPct}%;background:#f0d080;border-radius:3px;"></div>
+          </div>
+          <div style="font-size:10px;color:#f0d080;min-width:32px;text-align:right;">${lDead?'☠':m.leader.hp+'❤'}</div>
+        </div>
+        <button onclick="event.stopPropagation();openAttack(${m.uid})" style="width:100%;font-family:'Cinzel',serif;font-size:9px;padding:7px;border-radius:6px;cursor:pointer;background:linear-gradient(135deg,#2a1008,#180804);border:1px solid ${ts.border};color:#ee8855;letter-spacing:1px;text-transform:uppercase;">⚔ Atacar</button>`;
+    }
+    panel.appendChild(card);
+  });
+}
+
+// ===== ATTACK =====
+function openAttack(uid){
+  currentAttackMonsterId=uid; currentAttackDmg=1; currentAttackPlayerIdx=null;
+  const m=activeMonsters.find(x=>x.uid===uid);
+  document.getElementById('atk-title').textContent=`Atacar ${m.name}`;
+  const aliveMinions=m.minions.filter(mn=>mn.hp>0).length;
+  const allDead=m.minions.every(mn=>mn.hp<=0);
+  document.getElementById('atk-info').textContent=allDead
+    ?`Atacando o Líder (${m.leader.hp}❤ restante)`
+    :`${aliveMinions} lacaio${aliveMinions>1?'s':''} vivo${aliveMinions>1?'s':''} — lacaios morrem primeiro`;
+  document.getElementById('dmg-val').textContent='1';
+  document.getElementById('overlay-attack').dataset.mode='horde';
+  buildAttackPlayerList();
+  openOverlay('overlay-attack');
+}
+
+function openAttackRoaming(uid){
+  currentAttackMonsterId=uid; currentAttackDmg=1; currentAttackPlayerIdx=null;
+  const m=activeMonsters.find(x=>x.uid===uid);
+  document.getElementById('atk-title').textContent=`Atacar ${m.name}`;
+  document.getElementById('atk-info').textContent=`Vida atual: ${m.leader.hp} / ${m.leader.maxHp}`;
+  document.getElementById('dmg-val').textContent='1';
+  document.getElementById('overlay-attack').dataset.mode='roaming';
+  buildAttackPlayerList();
+  openOverlay('overlay-attack');
+}
+
+function buildAttackPlayerList(){
+  const pl=document.getElementById('atk-player-list'); pl.innerHTML='';
+  players.forEach((p,i)=>{
+    const btn=document.createElement('button');
+    btn.className='option-btn'; btn.textContent=p.name;
+    btn.onclick=()=>{ currentAttackPlayerIdx=i; pl.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); };
+    pl.appendChild(btn);
+  });
+}
+
+// ===== DAMAGE & DEFEAT =====
+function changeDmg(delta){
+  currentAttackDmg=Math.max(1,currentAttackDmg+delta);
+  document.getElementById('dmg-val').textContent=currentAttackDmg;
+}
+
+function applyDamage(){
+  if(currentAttackPlayerIdx===null){ alert('Selecione quem atacou.'); return; }
+  const m=activeMonsters.find(x=>x.uid===currentAttackMonsterId);
+  const mode=document.getElementById('overlay-attack').dataset.mode||'horde';
+  let dmg=currentAttackDmg;
+  closeOverlay('overlay-attack');
+  m.killedBy=currentAttackPlayerIdx;
+  if(mode==='roaming'){
+    m.leader.hp=Math.max(0,m.leader.hp-dmg);
+    if(m.leader.hp<=0){ m.defeated=true; renderActiveMonsters(); showKillRewardRoaming(m,currentAttackPlayerIdx); }
+    else renderActiveMonsters();
+  } else {
+    for(let i=0;i<m.minions.length&&dmg>0;i++){
+      if(m.minions[i].hp>0){ const tk=Math.min(m.minions[i].hp,dmg); m.minions[i].hp-=tk; dmg-=tk; }
+    }
+    if(dmg>0&&m.leader) m.leader.hp=Math.max(0,m.leader.hp-dmg);
+    const allDead=m.minions.every(mn=>mn.hp<=0);
+    const lDead=m.leader&&m.leader.hp<=0;
+    if(allDead&&lDead){ m.defeated=true; renderActiveMonsters(); showKillReward(m,currentAttackPlayerIdx); }
+    else renderActiveMonsters();
+  }
+}
+
+function confirmDefeatRoaming(uid){
+  if(!confirm('Confirmar derrota do Monstro Vagante?')) return;
+  const m=activeMonsters.find(x=>x.uid===uid);
+  m.defeated=true; m.killedBy=0;
+  renderActiveMonsters();
+  showKillRewardRoaming(m, 0);
+}
+
+// ===== KILL REWARDS =====
+function drawOneFromBag(){
+  const total=bag.common+bag.rare+bag.epic; if(total===0) return null;
+  const roll=Math.floor(Math.random()*total);
+  return roll<bag.common?'common':roll<bag.common+bag.rare?'rare':'epic';
+}
+
+function showKillReward(m, killerIdx){
+  const killer=players[killerIdx];
+  const rewardCount=m.rewards||1;
+  const labels={common:'Comum 📦',rare:'Raro 💠',epic:'Épico 💎'};
+  const drawn=[];
+  for(let i=0;i<rewardCount;i++){ const t=drawOneFromBag(); if(t) drawn.push(t); }
+  const others=players.filter((_,i)=>i!==killerIdx).map(p=>p.name);
+  document.getElementById('kill-reward-title').textContent=`${m.name} Derrotada!`;
+  document.getElementById('kill-reward-body').innerHTML=
+    `<strong style="color:var(--gold-light);">🏆 ${killer.name}</strong> matou a turba!<br><br>`+
+    `⚔️ <strong style="color:#f0d080;">${killer.name}</strong>: +3 XP<br>`+
+    (others.length>0?`👥 <strong style="color:#aaaadd;">${others.join(', ')}</strong>: +2 XP cada<br><br>`:'<br>')+
+    (drawn.length>0?`🎁 ${killer.name}: ${drawn.map(t=>`• ${labels[t]}`).join('<br>')}`:' ⚠️ Sacola vazia.');
+  openOverlay('overlay-kill-reward');
+}
+
+function showKillRewardRoaming(m, killerIdx){
+  const killer=players[killerIdx]||players[0];
+  const others=players.filter((_,i)=>i!==killerIdx).map(p=>p.name);
+  const labels={common:'Comum 📦',rare:'Raro 💠',epic:'Épico 💎'};
+  const drawn=[];
+  for(let i=0;i<(m.bagRewards||0);i++){ const t=drawOneFromBag(); if(t) drawn.push(t); }
+  let rewardLines='';
+  if(drawn.length>0) rewardLines+=`🎁 Tesouros da sacola:<br>${drawn.map(t=>`• ${labels[t]}`).join('<br>')}<br>`;
+  if(m.epicDeck>0) rewardLines+=`<strong style="color:#bb77ee;">💎 ${m.epicDeck} item${m.epicDeck>1?'s':''} Épico${m.epicDeck>1?'s':''} — busque no deck Épico!</strong><br>`;
+  if(m.rareMsg) rewardLines+=`<strong style="color:#6699dd;">💠 ${m.rareMsg}</strong><br>`;
+  document.getElementById('kill-reward-title').textContent=`${m.name} Derrotado!`;
+  document.getElementById('kill-reward-body').innerHTML=
+    `<strong style="color:var(--gold-light);">🏆 ${killer.name}</strong> derrotou o Monstro Vagante!<br><br>`+
+    `⚔️ <strong style="color:#f0d080;">${killer.name}</strong>: +${m.xpKiller||5} XP<br>`+
+    (others.length>0?`👥 <strong style="color:#aaaadd;">${others.join(', ')}</strong>: +${m.xpOthers||4} XP cada<br><br>`:'<br>')+
+    (rewardLines||'⚠️ Sem recompensa configurada.');
+  openOverlay('overlay-kill-reward');
+}
+
+// ===== OVERLAY HELPERS =====
+function openOverlay(id){document.getElementById(id).classList.add('open');}
+function closeOverlay(id){document.getElementById(id).classList.remove('open');}
+
+// ===== RESET =====
+function resetGame(){
+  if(!confirm('Reiniciar a partida? Todos os dados serão perdidos.')) return;
+  bag={common:10,rare:5,epic:0};
+  currentStep=1; isExtraTrack=false;
+  pendingEvents=[]; processingEvent=false;
+  levelUpAsked=false; players=[]; pendingLevelChoices={};
+  pendingGizmoUpgrades=[]; gizmoPickIdx=-1; gizmoPickTokens=[];
+  activeMonsters=[]; monsterIdCounter=0; gameMode='full';
+  document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+  document.getElementById('game-screen').style.display='none';
+  document.getElementById('setup-screen').style.display='none';
+  const intro=document.getElementById('intro-screen');
+  intro.style.display='flex';
+  intro.style.animation='fadeIn 0.5s ease';
+  selectedCount=0;
+  document.querySelectorAll('.count-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('player-inputs').innerHTML='';
+  document.getElementById('btn-begin').style.display='none';
+  document.getElementById('extra-track-section').classList.remove('visible');
+}
+
+// ===== INFO =====
+function setInfo(msg){document.getElementById('info-panel').innerHTML=msg;}
+
+// ===== PWA =====
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>

@@ -292,6 +292,7 @@ body{
         <button class="btn btn-advance" onclick="advanceStep()">▶ Avançar Turno</button>
         <button class="btn" onclick="retreatStep()" style="background:linear-gradient(135deg,#1a1408,#0e0c06);border-color:#5a4a1e;color:#a08840;">◀ Recuar</button>
         <button id="btn-spawn-monster" class="btn" onclick="openSpawnMonster()" style="background:linear-gradient(135deg,#1a0a0a,#0e0606);border-color:#7a2a2a;color:#dd6666;">💀 Invocar Monstro</button>
+        <button class="btn" onclick="drawDoorCard()" style="background:linear-gradient(135deg,#0a1a2a,#060e18);border-color:#3a6a9a;color:#88bbdd;position:relative;">🚪 Ação de Porta <span id="door-discard-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#3a6a9a;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-family:'Cinzel',serif;"></span></button>
         <button class="btn btn-reset" onclick="resetGame()">↺ Reiniciar</button>
       </div>
       <!-- ACTIVE MONSTERS PANEL -->
@@ -439,7 +440,32 @@ body{
   </div>
 </div>
 
-<!-- TINKERER INVENTORY -->
+<!-- DOOR CARD -->
+<div class="overlay" id="overlay-door">
+  <div class="popup" style="max-width:400px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">🚪</div>
+    <div class="popup-title" id="door-card-title">Carta de Porta</div>
+    <div class="popup-separator"></div>
+    <div id="door-card-body" style="text-align:left;font-size:13px;line-height:1.7;color:var(--parchment);"></div>
+    <div id="door-discard-info" style="margin-top:12px;font-size:10px;font-family:'Cinzel',serif;letter-spacing:1px;color:var(--gold-dark);text-align:center;"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-door')">Entendido</button>
+  </div>
+</div>
+
+<!-- DOOR DISCARD PILE -->
+<div class="overlay" id="overlay-door-discard">
+  <div class="popup" style="max-width:420px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">🃏</div>
+    <div class="popup-title">Pilha de Descarte</div>
+    <div class="popup-separator"></div>
+    <div id="discard-list" style="max-height:320px;overflow-y:auto;text-align:left;"></div>
+    <button class="btn-ok" onclick="closeOverlay('overlay-door-discard')">Fechar</button>
+  </div>
+</div>
 <div class="overlay" id="overlay-tinv">
   <div class="popup" style="max-width:400px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
@@ -676,6 +702,7 @@ function startGame(){
   document.getElementById('game-subtitle').textContent=modeLabels[gameMode]||'Rastreador de Turno';
   renderPlayersSidebar();
   initTracks();
+  initDoorDeck();
   setInfo('Que os heróis entrem nas trevas! Clique em <strong style="color:var(--gold)">▶ Avançar Turno</strong> para começar.');
 }
 
@@ -1875,6 +1902,124 @@ function showKillRewardRoaming(m, killerIdx){
   openOverlay('overlay-kill-reward');
 }
 
+// ===== DOOR CARDS =====
+const DOOR_CARDS = [
+  // Salas
+  { id:'sala_armadilha_urso', name:'Sala da Armadilha de Urso',
+    text:'Adicione 1 Marcador de Armadilha de Urso à Zona que cruzar a porta dentro da Câmara, se possível.' },
+  { id:'sala_fonte', name:'Sala da Fonte',
+    text:'Coloque um Marcador de Fonte na Zona mais longe desta Câmara, se possível.' },
+  { id:'sala_forca_sombria', name:'Sala da Força Sombria',
+    text:'Se houver algum Monstro Vagante na Masmorra, escolha um dele e substitua a carta dele por outra de 1 nível acima, se possível (mantenha todos os marcadores que já estavam nela).' },
+  { id:'sala_pedra_amolar', name:'Sala da Pedra de Amolar',
+    text:'O herói ativo pode ficar com esta carta até o fim da Missão e descartá-la em um ataque para ganhar Ataque: +1 🟡.' },
+  { id:'sala_repaos', name:'Sala de Reparo',
+    text:'O herói ativo pode ficar com esta carta até o fim da Missão e descartá-la em uma defesa para ganhar Defesa: +1 🔵.' },
+  { id:'sala_treinamento', name:'Sala de Treinamento',
+    text:'O herói ativo ganha 3 EXP. Descarte todos os Marcadores de Ação deste local sem adicionar Marcadores de Tesouro.' },
+  { id:'sala_distorcida', name:'Sala Distorcida',
+    text:'O herói ativo pode escolher outro herói e colocá-lo em sua Zona (contanto que o outro herói concorde).' },
+  { id:'sala_ritual_sangue', name:'Sala do Ritual de Sangue',
+    text:'Descarte todos os Marcadores desta Câmara sem efeitos. Faça aparecer um Monstro Vagante na Zona mais longe desta Câmara. Todas as Zonas com 1 Marcador desta Câmara recebem 1 Marcador de Tesouro extra.' },
+  { id:'sala_proibida', name:'Sala Proibida',
+    text:'Faça aparecer 1 Monstro Vagante na mesma Zona em que estiver o herói com mais Vida. ENTÃO, vire um Marcador de Portador de Vida gasto de volta, se possível. Remova 1 Marcador desta Câmara, se possível.' },
+  { id:'sala_vazia', name:'Sala Vazia',
+    text:'Se houver algum Marcador de Monstro Vagante nesta Câmara, remova todos eles.' },
+  { id:'sopro_mana', name:'Sopro de Mana',
+    text:'Cada herói, nesta câmara, peça ganha 2 Mana.' },
+  { id:'vento_revigorante', name:'Vento Revigorante',
+    text:'O herói ativo ganha 1 ação neste turno.' },
+  // Câmaras
+  { id:'camara_amaldacoada', name:'Câmara Amaldiçoada',
+    text:'Cada herói sofre 1 Dano a menos que ele gaste 1 Mana.' },
+  { id:'camara_congelada', name:'Câmara Congelada',
+    text:'O herói ativo e todas as Turbas que aparecerem nesta Câmara sofrem 1 Dano.' },
+  { id:'camara_luz', name:'Câmara da Luz',
+    text:'Se possível, mova o Marcador de Escuridão 1 espaço para trás sem aplicar efeitos do Indicador de Escuridão (repõe qualquer efeito do Indicador de Escuridão quando ele avançar na Fase da Escuridão).' },
+  { id:'camara_aura_corajosa', name:'Câmara de Aura Corajosa',
+    text:'O herói ativo pode ficar com esta carta até o fim da Missão e descartá-la em um ataque para ganhar Ataque: +2 🟡.' },
+  { id:'camara_fogo', name:'Câmara do Fogo',
+    text:'O herói ativo e todas as Turbas que aparecerem nesta Câmara sofrem 1 Dano 🔥.' },
+  { id:'chamado_inferno', name:'Chamado do Inferno',
+    text:'Faça aparecer 1 Monstro Vagante no Portal de Monstros Vagantes. Remova 1 Marcador desta Câmara, se possível.' },
+  { id:'caserna_inimigos', name:'Caserna dos Inimigos',
+    text:'Faça a próxima Turba aparecer com 1 Servo a mais, se possível. Mantenha esta carta perto do baralho de Turba para servir de lembrete.' },
+  { id:'camaras_gemeas', name:'Câmaras Gêmeas',
+    text:'Após revelar esta Câmara, abra a Câmara fechada mais próxima e revele-a também (não compre uma Carta de Porta para a segunda Câmara).' },
+  { id:'catela_inesperada', name:'Catela Inesperada',
+    text:'Cada herói nesta peça cura 2.' },
+  { id:'deposito_armas', name:'Depósito de Armas',
+    text:'A próxima Turba que você fizer aparecer virá com 1 Item de Turba de 1 nível superior, se possível. Mantenha esta carta perto do baralho de Turba para servir de lembrete.' },
+  { id:'emboscada', name:'Emboscada!',
+    text:'Faça aparecer 1 Turba na Zona do herói ativo. Remova 1 Marcador desta Câmara, se possível.' },
+  { id:'exercito_infernal', name:'Exército Infernal',
+    text:'Faça aparecer 1 Turba em cada Portal. Coloque 1 Marcador de Tesouro extra da Bolsa de Tesouros em cada Turba que aparecer dessa forma. Se houver algum Marcador nesta Câmara, remova todos eles.' },
+  { id:'passagem_portal', name:'Passagem do Portal',
+    text:'Faça aparecer 1 Turba em qualquer Portal (os jogadores escolhem).' },
+  { id:'perseguindo_fracos', name:'Perseguindo os Mais Fracos',
+    text:'Faça aparecer 1 Turba em uma Zona adjacente ao herói com menos Vida (os jogadores escolhem a Zona). Remova 1 Marcador desta Câmara, se possível.' },
+  { id:'planos_inimigo', name:'Planos do Inimigo',
+    text:'Faça aparecer 1 Turba em qualquer Portal (os jogadores escolhem). Remova 1 Marcador desta Câmara, se possível.' },
+  { id:'sala_abarrotada', name:'Sala Abarrotada',
+    text:'Coloque 2 Marcadores de Monstro Vagante e 1 Turba mais longe desta Câmara.' },
+  { id:'sala_armadilha_tesouro', name:'Sala Armadilhada do Tesouro',
+    text:'O herói ativo sofre 2 Danos. Todas as Zonas com 1 Marcador desta Câmara recebem 1 Marcador de Tesouro extra.' },
+  { id:'sala_armadilha_espinhos', name:'Sala da Armadilha de Espinhos',
+    text:'Adicione 1 Marcador de Armadilha de Espinhos à Zona que cruzar a porta dentro da Câmara, se possível.' },
+];
+
+let doorDeck = [];
+let doorDiscard = [];
+
+function initDoorDeck(){
+  doorDeck = [...DOOR_CARDS].sort(()=>Math.random()-0.5);
+  doorDiscard = [];
+  updateDiscardBadge();
+}
+
+function updateDiscardBadge(){
+  const badge = document.getElementById('door-discard-badge');
+  if(badge) badge.textContent = doorDiscard.length > 0 ? doorDiscard.length : '';
+  badge && (badge.style.display = doorDiscard.length > 0 ? 'inline-block' : 'none');
+}
+
+function drawDoorCard(){
+  if(doorDeck.length === 0){
+    // Reshuffle discard
+    doorDeck = [...doorDiscard].sort(()=>Math.random()-0.5);
+    doorDiscard = [];
+    setInfo('Baralho de Portas reembaralhado!');
+  }
+  const card = doorDeck.pop();
+  doorDiscard.push(card);
+  updateDiscardBadge();
+
+  document.getElementById('door-card-title').textContent = card.name;
+  document.getElementById('door-card-body').innerHTML =
+    `<div style="padding:14px;background:linear-gradient(135deg,#1a1408,#0e0c06);border-radius:10px;border:1px solid var(--gold-dark);">`+
+    `<div style="font-size:14px;line-height:1.8;color:var(--parchment);">${card.text}</div></div>`;
+  document.getElementById('door-discard-info').innerHTML =
+    `🃏 Pilha de descarte: <strong style="color:var(--gold-light);">${doorDiscard.length}</strong> carta${doorDiscard.length>1?'s':''} &nbsp;|&nbsp; `+
+    `Deck: <strong style="color:var(--gold-light);">${doorDeck.length}</strong> restante${doorDeck.length!==1?'s':''}  `+
+    `<span onclick="showDoorDiscard()" style="color:#88bbdd;text-decoration:underline;cursor:pointer;font-size:10px;">ver descarte</span>`;
+  openOverlay('overlay-door');
+}
+
+function showDoorDiscard(){
+  closeOverlay('overlay-door');
+  const list = document.getElementById('discard-list');
+  if(doorDiscard.length === 0){
+    list.innerHTML='<div style="text-align:center;opacity:0.5;font-style:italic;">Nenhuma carta descartada ainda.</div>';
+  } else {
+    list.innerHTML = [...doorDiscard].reverse().map((c,i)=>
+      `<div style="padding:10px 12px;${i<doorDiscard.length-1?'border-bottom:1px solid rgba(255,255,255,0.07);':''}${i===0?'background:rgba(255,255,255,0.04);border-radius:8px;':''}">`+
+      `<div style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-light);margin-bottom:4px;">${i===0?'🃏 ':''} ${c.name}</div>`+
+      `<div style="font-size:12px;color:var(--parchment);opacity:0.75;line-height:1.5;">${c.text}</div></div>`
+    ).join('');
+  }
+  openOverlay('overlay-door-discard');
+}
+
 // ===== OVERLAY HELPERS =====
 function openOverlay(id){document.getElementById(id).classList.add('open');}
 function closeOverlay(id){document.getElementById(id).classList.remove('open');}
@@ -1888,6 +2033,7 @@ function resetGame(){
   levelUpAsked=false; players=[]; pendingLevelChoices={};
   pendingGizmoUpgrades=[]; gizmoPickIdx=-1; gizmoPickTokens=[];
   activeMonsters=[]; monsterIdCounter=0; gameMode='full'; selectedTrack='normal';
+  doorDeck=[]; doorDiscard=[];
   document.getElementById('extra-track-section').style.display='';
   document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
   document.getElementById('game-screen').style.display='none';

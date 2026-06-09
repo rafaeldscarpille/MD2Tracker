@@ -684,15 +684,17 @@ body{
 </div>
 
 <!-- MONSTER INFO -->
-<div class="overlay" id="overlay-minfo">
-  <div class="popup" style="max-width:440px;">
+<div class="overlay" id="overlay-minfo" onclick="if(event.target===this)closeOverlay('overlay-minfo')">
+  <div class="popup" style="max-width:520px;width:96%;max-height:90vh;overflow-y:auto;padding:22px 20px 20px;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <!-- Close X top-right -->
+    <button onclick="closeOverlay('overlay-minfo')" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--gold-dark);font-size:20px;cursor:pointer;line-height:1;z-index:2;opacity:0.7;">✕</button>
     <div class="popup-icon" id="minfo-icon">👹</div>
     <div class="popup-title" id="minfo-name">Monstro</div>
     <div class="popup-separator"></div>
     <div class="popup-body" id="minfo-body" style="text-align:left;font-size:13px;line-height:1.8;"></div>
-    <button class="btn-ok" onclick="closeOverlay('overlay-minfo')">Fechar</button>
+    <button class="btn-ok" onclick="closeOverlay('overlay-minfo')" style="width:100%;margin-top:8px;">Fechar</button>
   </div>
 </div>
 
@@ -1228,43 +1230,18 @@ function triggerEvent(ev){
     document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
     openOverlay('overlay-roaming');
   } else if(ev.type==='horde_activate'){
-    if(!isSimpleMode()){
-      spawnHorde(true);
-      document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{
-        closeOverlay('overlay-horde-spawned');
-        // After spawning, also show activate reminder
-        document.getElementById('roaming-title').textContent='Ativar as Turbas Geradas!';
-        document.getElementById('roaming-body').textContent='Ative cada Turba gerada agora. Os jogadores escolhem a ordem.';
-        document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
-        openOverlay('overlay-roaming');
-      };
-    } else {
-      document.getElementById('roaming-title').textContent='Turba + Ativar!';
-      document.getElementById('roaming-body').textContent='Gere uma Turba em cada Zona com Portal. Então, ative cada Turba gerada. Os jogadores escolhem a ordem.';
+    spawnHorde(true);
+    document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{
+      closeOverlay('overlay-horde-spawned');
+      document.getElementById('roaming-title').textContent='Ativar as Turbas Geradas!';
+      document.getElementById('roaming-body').textContent='Ative cada Turba gerada agora. Os jogadores escolhem a ordem.';
       document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
       openOverlay('overlay-roaming');
-    }
+    };
   } else if(ev.type==='roaming'){
-    if(!isSimpleMode()){
-      spawnRoaming(true);
-      document.getElementById('roaming-title').textContent='Monstro Vagante!';
-      document.getElementById('roaming-body').textContent='Monstro Vagante invocado automaticamente! Busque uma carta do baralho e coloque-a em jogo.';
-    } else {
-      document.getElementById('roaming-title').textContent='Monstro Vagante!';
-      document.getElementById('roaming-body').textContent='Busque uma carta do baralho de Monstros Vagantes e coloque-a em jogo seguindo as regras de aparição.';
-    }
-    document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
-    openOverlay('overlay-roaming');
+    spawnRoaming(true);
   } else if(ev.type==='horde'){
-    if(!isSimpleMode()){
-      spawnHorde(true);
-      document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
-    } else {
-      document.getElementById('roaming-title').textContent='Monstro de Turba!';
-      document.getElementById('roaming-body').textContent='Busque uma carta do baralho de Turba e coloque-a em jogo seguindo as regras de aparição da Turba.';
-      document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
-      openOverlay('overlay-roaming');
-    }
+    spawnHorde(true);
   } else if(ev.type==='token'){
     addToken(ev.token);
   }
@@ -2228,9 +2205,9 @@ function showMonsterInfo(uid){
   const p_img=m.cardImageUrl||getPortrait(m.uid_base,m.tier);
   if(p_img){
     document.getElementById('minfo-icon').innerHTML=
-      `<img src="${p_img}" style="width:180px;height:180px;border-radius:14px;object-fit:cover;`+
-      `display:block;margin:0 auto 12px;border:3px solid ${ts.border};`+
-      `box-shadow:0 0 22px ${ts.glow},0 0 8px rgba(0,0,0,0.8);">`;
+      `<img src="${p_img}" onclick="openLightbox('${p_img}')" style="width:180px;height:180px;border-radius:14px;object-fit:cover;`+
+      `display:block;margin:0 auto 12px;border:3px solid ${ts.border};cursor:zoom-in;`+
+      `box-shadow:0 0 22px ${ts.glow},0 0 8px rgba(0,0,0,0.8);" title="Clique para ampliar">`;
   } else {
     document.getElementById('minfo-icon').textContent=m.icon;
   }

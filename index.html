@@ -283,8 +283,24 @@ body{
       <button class="count-btn" onclick="selectCount(6)">6</button>
     </div>
     <div class="player-inputs" id="player-inputs"></div>
+    <!-- Expansion selector — shown after player count chosen -->
+    <div id="expansion-selector" style="display:none;width:100%;margin-bottom:16px;">
+      <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--gold-dark);text-transform:uppercase;margin-bottom:10px;text-align:center;">⚔ Expansões a usar ⚔</div>
+      <div id="expansion-loading" style="font-size:11px;color:var(--parchment);opacity:0.5;text-align:center;font-family:'Lato',sans-serif;">Carregando expansões...</div>
+      <div id="expansion-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="selectAllExpansions()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:6px;border-radius:6px;cursor:pointer;background:transparent;border:1px solid var(--gold-dark);color:var(--gold-dark);text-transform:uppercase;">Todas</button>
+        <button onclick="clearAllExpansions()" style="flex:1;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:6px;border-radius:6px;cursor:pointer;background:transparent;border:1px solid #555;color:#888;text-transform:uppercase;">Nenhuma</button>
+      </div>
+    </div>
     <button class="btn-begin" id="btn-begin" style="display:none" onclick="startGame()">⚔ Adentrar as Trevas ⚔</button>
   </div>
+</div>
+
+<!-- ===== LIGHTBOX ===== -->
+<div id="lightbox-overlay" onclick="closeLightbox()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10000;align-items:center;justify-content:center;cursor:zoom-out;">
+  <img id="lightbox-img" src="" style="max-width:92vw;max-height:88vh;border-radius:14px;object-fit:contain;box-shadow:0 0 60px rgba(0,0,0,0.9);pointer-events:none;">
+  <div style="position:absolute;top:16px;right:18px;font-size:24px;color:#fff;opacity:0.6;pointer-events:none;">✕</div>
 </div>
 
 <!-- ===== GAME ===== -->
@@ -719,6 +735,153 @@ function showSetup(){
 const CLASSES=['Paladino','Mago','Xamã','Berserker','Necromante','Monge','Tinkerer','Druida','Patrulheiro','Ladrão','Bardo'];
 
 let selectedCount=0;
+// ===== EXPANSION SELECTION =====
+let availableExpansions = [];
+let selectedExpansions = new Set();
+let expansionCardsCache = {};
+
+async function loadExpansionsForSetup(){
+  const loading = document.getElementById('expansion-loading');
+  const list = document.getElementById('expansion-list');
+  if(loading) loading.style.display='block';
+  if(list) list.innerHTML='';
+  expansionCardsCache = {};
+  const exps = await fetchExpansions();
+  availableExpansions = exps;
+  if(loading) loading.style.display='none';
+
+  if(!exps || exps.length === 0){
+    if(list) list.innerHTML=`<div style="text-align:center;padding:10px;">
+      <div style="font-size:11px;color:#ee8844;font-family:'Lato',sans-serif;margin-bottom:6px;">⚠ Expansões não carregadas</div>
+      <div style="font-size:10px;color:var(--parchment);opacity:0.5;font-family:'Lato',sans-serif;">Configure o proxy Cloudflare para carregar expansões.<br>O jogo usará todas as cartas disponíveis.</div>
+    </div>`;
+    activeExpansionFilter = null;
+    return;
+  }
+  selectedExpansions = new Set(exps.map(e => e.name));
+  renderExpansionList();
+}
+
+function renderExpansionList(){
+  const list = document.getElementById('expansion-list');
+  if(!list) return;
+  const PILE_NAMES = ["Turba 1-2","Turba 3-4","Turba 5","Turba 6-7","Turba 8-9","Turba 10","Vagante 1-2","Vagante 3-4","Vagante 5","Vagante 6-7","Vagante 8-9","Vagante 10"];
+  list.innerHTML = availableExpansions.map(e => {
+    const sel = selectedExpansions.has(e.name);
+    const cache = expansionCardsCache[e.name];
+    const countTag = cache
+      ? `<span style="font-size:9px;color:var(--gold-dark);font-family:'Cinzel',serif;padding:1px 5px;border-radius:3px;background:rgba(201,168,76,0.1);">${cache.turbas.length}T · ${cache.vagantes.length}V</span>`
+      : '';
+    const safeN = e.name.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    return `<div id="exp-row-${e.id}" style="border-radius:8px;border:1px solid ${sel?'var(--gold-dark)':'rgba(255,255,255,0.08)'};overflow:hidden;margin-bottom:4px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${sel?'rgba(201,168,76,0.07)':'rgba(255,255,255,0.02)'};">
+        <input type="checkbox" id="exp-cb-${e.id}" ${sel?'checked':''} onchange="toggleExpansion('${safeN}',this.checked,'${e.id}')"
+          style="width:16px;height:16px;cursor:pointer;accent-color:#c9a84c;flex-shrink:0;">
+        <span onclick="document.getElementById('exp-cb-${e.id}').click()" style="font-family:'Lato',sans-serif;font-size:12px;color:var(--parchment);flex:1;cursor:pointer;">${e.name}</span>
+        ${countTag}
+        <button onclick="toggleExpansionPreview('${safeN}','${e.id}')"
+          style="font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;background:transparent;border:1px solid var(--gold-dark);color:var(--gold-dark);" title="Ver cartas">👁</button>
+      </div>
+      <div id="exp-preview-${e.id}" style="display:none;padding:10px;border-top:1px solid rgba(255,255,255,0.05);background:rgba(0,0,0,0.3);">
+        <div id="exp-preview-content-${e.id}" style="font-size:10px;color:var(--parchment);font-family:'Lato',sans-serif;">Carregando...</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleExpansionPreview(name, id){
+  const panel = document.getElementById('exp-preview-'+id);
+  const content = document.getElementById('exp-preview-content-'+id);
+  if(!panel || !content) return;
+  if(panel.style.display !== 'none'){ panel.style.display='none'; return; }
+  panel.style.display = 'block';
+  if(expansionCardsCache[name]){ renderExpansionPreview(content, expansionCardsCache[name]); return; }
+  content.textContent = 'Carregando cartas...';
+  try {
+    const result = await supaFetch('global_cards?expansion=eq.'+encodeURIComponent(name)+'&select=id,name,image_url,pile_index&order=pile_index.asc');
+    if(result.needAuth || result.networkBlocked){
+      content.innerHTML = '<span style="color:#ee8844;">Necessário login para ver as cartas.</span>'; return;
+    }
+    const cards = result.data || [];
+    const turbas = cards.filter(c=>c.pile_index>=0&&c.pile_index<=5);
+    const vagantes = cards.filter(c=>c.pile_index>=6&&c.pile_index<=11);
+    expansionCardsCache[name] = {turbas,vagantes};
+    renderExpansionList();
+    // reopen after re-render
+    const p2 = document.getElementById('exp-preview-'+id);
+    const c2 = document.getElementById('exp-preview-content-'+id);
+    if(p2) p2.style.display='block';
+    if(c2) renderExpansionPreview(c2,{turbas,vagantes});
+  } catch(e){ content.innerHTML='<span style="color:#ee6644;">Erro: '+e.message+'</span>'; }
+}
+
+function renderExpansionPreview(el, {turbas, vagantes}){
+  if(!turbas.length && !vagantes.length){ el.innerHTML='<span style="opacity:0.5;">Nenhuma carta encontrada.</span>'; return; }
+  // Deduplicate by name (same monster appears in multiple pile levels)
+  const uniqueCards = (cards) => {
+    const seen = new Set();
+    return cards.filter(c => { if(seen.has(c.name)) return false; seen.add(c.name); return true; });
+  };
+  const section = (label, color, cards) => {
+    if(!cards.length) return '';
+    const unique = uniqueCards(cards);
+    const rows = unique.map(c => {
+      const expName = c.name.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const sel = selectedExpansionCards && selectedExpansionCards.has(c.id);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);">
+        <input type="checkbox" data-card-id="${c.id}" data-card-name="${expName}" ${sel?'checked':''}
+          style="width:14px;height:14px;cursor:pointer;accent-color:#c9a84c;flex-shrink:0;"
+          onchange="toggleExpansionCard(this)">
+        <span style="font-family:'Lato',sans-serif;font-size:11px;color:var(--parchment);flex:1;">${c.name}</span>
+      </label>`;
+    }).join('');
+    return `<div style="margin-bottom:10px;">
+      <div style="font-family:'Cinzel',serif;font-size:8px;color:${color};letter-spacing:1px;padding:3px 0 5px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:6px;">${label} (${unique.length})</div>
+      <div style="display:flex;flex-direction:column;gap:3px;">${rows}</div>
+    </div>`;
+  };
+  el.innerHTML = section('🔴 TURBAS','#ee8888',turbas) + section('💀 VAGANTES','#cc88ee',vagantes);
+}
+
+// Per-card selection (optional fine-grained filter — for future use)
+let selectedExpansionCards = null; // null = all selected
+function toggleExpansionCard(cb){
+  // currently just visual — expansion-level filter is sufficient
+}
+
+function toggleExpansion(name, checked, id){
+  if(checked) selectedExpansions.add(name);
+  else selectedExpansions.delete(name);
+  // Update row border/bg without full re-render
+  const row = document.getElementById('exp-row-'+id);
+  if(row){
+    const inner = row.querySelector('div');
+    if(inner){
+      row.style.borderColor = checked ? 'var(--gold-dark)' : 'rgba(255,255,255,0.08)';
+      inner.style.background = checked ? 'rgba(201,168,76,0.07)' : 'rgba(255,255,255,0.02)';
+    }
+  }
+}
+
+function selectAllExpansions(){
+  selectedExpansions = new Set(availableExpansions.map(e=>e.name));
+  renderExpansionList();
+}
+
+function clearAllExpansions(){
+  selectedExpansions = new Set();
+  renderExpansionList();
+}
+
+function applyExpansionFilter(){
+  if(!availableExpansions.length || selectedExpansions.size===availableExpansions.length)
+    activeExpansionFilter=null;
+  else if(selectedExpansions.size===0)
+    activeExpansionFilter=null;
+  else
+    activeExpansionFilter=Array.from(selectedExpansions);
+}
+
 function selectCount(n){
   selectedCount=n;
   document.querySelectorAll('.count-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===n));
@@ -737,6 +900,11 @@ function selectCount(n){
       </div>`;
   }
   document.getElementById('btn-begin').style.display='block';
+  const expSel = document.getElementById('expansion-selector');
+  if(expSel){
+    expSel.style.display='block';
+    loadExpansionsForSetup();
+  }
 }
 
 function startGame(){
@@ -769,11 +937,12 @@ function startGame(){
       gizmoInventory:[],
     });
   }
+  applyExpansionFilter();
   document.getElementById('setup-screen').style.display='none';
   document.getElementById('game-screen').style.display='block';
   const isSimple = gameMode==='simple'||gameMode==='hard-simple';
   const isHardTrack = gameMode==='hard'||gameMode==='hard-simple';
-  document.getElementById('btn-spawn-monster').style.display='none';
+  document.getElementById('btn-spawn-monster').style.display='';
   document.getElementById('extra-track-section').style.display=isHardTrack?'none':'';
   // Show mode badge in header
   const modeLabels={'simple':'Trilha Normal','hard-simple':'Hard Challenge'};
@@ -1636,96 +1805,418 @@ let currentAttackMonsterId=null, currentAttackDmg=1, currentAttackPlayerIdx=null
 
 function getActiveMonsterNames(){ return activeMonsters.filter(m=>!m.defeated).map(m=>m.name); }
 
-// ===== SPAWN =====
-function openSpawnMonster(){ openOverlay('overlay-spawn-type'); }
+// ===== PORTAL MASSIVE — SUPABASE INTEGRATION =====
+const SUPA_URL = 'https://zlsnqewkhaaubqbbbclf.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsc25xZXdraGFhdWJxYmJiY2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NzM2NzEsImV4cCI6MjA5MzA0OTY3MX0.ypPE_7om0eJ5kixt_g9-ab6v66YhLUQ9Zv9ibiO8K1A';
 
-function spawnRoaming(fromTrack){
-  if(!fromTrack) closeOverlay('overlay-spawn-type');
-  const tier=getHordeTier();
-  const ts=getTierStyle(tier);
-  const activeNames=getActiveMonsterNames();
-  const available=ROAMINGS_ALL.filter(r=>!activeNames.includes(r.name));
-  if(available.length===0){ setInfo('Todos os Monstros Vagantes já estão ativos!'); if(fromTrack){afterEvent();} return; }
-  const base=available[Math.floor(Math.random()*available.length)];
-  const t=base.tiers[tier-1];
-  const count=players.length||1;
-  const totalHp=t.hp*count;
-  const id=++monsterIdCounter;
-  let roamingReward='2 tesouros da sacola + 1 item Raro do deck';
-  if(tier===3) roamingReward='3 itens Épicos do deck';
-  else if(tier===2) roamingReward='2 tesouros da sacola + 1 item Épico do deck';
-  activeMonsters.push({
-    uid:id, type:'roaming', uid_base:base.id,
-    name:base.name, icon:base.icon, color:base.color,
-    tier, tierStyle:ts,
-    leader:{hp:totalHp, maxHp:totalHp},
-    minions:[],
-    specialDesc:t.specialDesc, attack:t.attack, defense:t.defense,
-    xpKiller:t.xpKiller, xpOthers:t.xpOthers,
-    bagRewards:t.bagRewards, epicDeck:t.epicDeck, rareMsg:t.rareMsg,
-    defeated:false, killedBy:null,
-  });
-  renderActiveMonsters();
-  // Popup estilo turba com imagem
-  const sp_img=getPortrait(base.id,tier);
-  if(sp_img){document.getElementById('horde-spawn-icon').innerHTML=`<img src="${sp_img}" style="width:130px;height:130px;border-radius:14px;object-fit:cover;display:block;margin:0 auto 8px;box-shadow:0 0 16px rgba(0,0,0,0.7);">`;}
-  else{document.getElementById('horde-spawn-icon').textContent=base.icon;}
-  document.getElementById('horde-spawn-name').textContent=`${base.name} Aparece! ${ts.label}`;
-  document.getElementById('horde-spawn-body').innerHTML=
-    `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${ts.label}</span><br>`+
-    `<strong style="color:var(--gold-light);">❤️ Vida:</strong> ${t.hp} × ${count} jogadores = <strong style="color:#ee8888;">${totalHp} total</strong><br>`+
-    `<strong style="color:var(--gold-light);">🛡 Defesa:</strong> ${formatDice(t.defense)}<br>`+
-    `<strong style="color:var(--gold-light);">⚔️ Ataque:</strong> ${formatDice(t.attack)}<br>`+
-    `<strong style="color:var(--gold-light);">🌟 Especial:</strong> ${formatDice(t.specialDesc)}<br><br>`+
-    `<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${roamingReward}`;
-  const spBtn=document.getElementById('overlay-horde-spawned').querySelector('.btn-ok');
-  if(fromTrack){
-    spBtn.onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+// Proxy URL — set after deploying the Cloudflare Worker
+// Try to load from localStorage
+let PROXY_URL = null;
+try { PROXY_URL = localStorage.getItem('md2_proxy_url') || null; } catch(e){}
+
+// Expansion filter for card draws
+let activeExpansionFilter = null; // null = all expansions
+
+// ===== SUPABASE PURE FETCH (no SDK — works in srcdoc/file://) =====
+let _supaToken = null;
+
+// Persist token in localStorage
+function loadToken(){
+  try { _supaToken = localStorage.getItem('pm_token') || null; } catch(e){}
+}
+function saveToken(t){
+  _supaToken = t;
+  try { localStorage.setItem('pm_token', t); } catch(e){}
+}
+function clearToken(){
+  _supaToken = null;
+  try { localStorage.removeItem('pm_token'); } catch(e){}
+}
+loadToken();
+
+async function supaFetch(path, opts={}){
+  let url, headers;
+  if(PROXY_URL){
+    const token = _supaToken || SUPA_KEY;
+    url = `${PROXY_URL}?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
+    headers = { 'Content-Type': 'application/json' };
   } else {
-    spBtn.onclick=()=>{closeOverlay('overlay-horde-spawned');};
+    url = `${SUPA_URL}/rest/v1/${path}`;
+    headers = {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${_supaToken || SUPA_KEY}`,
+      'Content-Type': 'application/json',
+    };
   }
-  openOverlay('overlay-horde-spawned');
+  let res;
+  try { res = await fetch(url, { ...opts, headers }); }
+  catch(netErr) {
+    console.warn('[MD2] supaFetch network error:', netErr.message, 'url:', url);
+    return { networkBlocked: true };
+  }
+  const text = await res.text();
+  console.log('[MD2] supaFetch', res.status, url.substring(0,80), text.substring(0,120));
+  if(!res.ok){
+    if(res.status === 401 || res.status === 403){
+      if(text.includes('Host not in allowlist') || text.includes('host_not_allowed')){
+        return { networkBlocked: true };
+      }
+      return { needAuth: true };
+    }
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  return { data: JSON.parse(text) };
 }
 
-function spawnHorde(fromTrack){
+async function supaAuthFetch(path, opts={}){
+  let url, headers;
+  if(PROXY_URL){
+    url = `${PROXY_URL}?path=${encodeURIComponent('auth/'+path)}`;
+    headers = { 'Content-Type': 'application/json' };
+  } else {
+    url = `${SUPA_URL}/auth/v1/${path}`;
+    headers = { 'apikey': SUPA_KEY, 'Content-Type': 'application/json' };
+  }
+  const res = await fetch(url, { ...opts, headers });
+  const text = await res.text();
+  if(!res.ok){
+    if(text.includes('Host not in allowlist')) return { networkBlocked: true };
+    const json = JSON.parse(text);
+    throw new Error(json.error_description || json.msg || json.message || 'Erro de autenticação');
+  }
+  return JSON.parse(text);
+}
+
+async function supaSignIn(email, password){
+  const result = await supaAuthFetch('token?grant_type=password', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  });
+  if(result.networkBlocked) throw new Error('NETWORK_BLOCKED');
+  saveToken(result.access_token);
+  return result;
+}
+
+
+const WORKER_CODE = "const S='https://zlsnqewkhaaubqbbbclf.supabase.co',K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsc25xZXdraGFhdWJxYmJiY2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NzM2NzEsImV4cCI6MjA5MzA0OTY3MX0.ypPE_7om0eJ5kixt_g9-ab6v66YhLUQ9Zv9ibiO8K1A',C={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'};export default{async fetch(r){if(r.method==='OPTIONS')return new Response(null,{status:204,headers:C});const u=new URL(r.url),p=u.searchParams.get('path'),t=u.searchParams.get('token')||K;if(!p)return new Response('{}',{headers:C});const a=p.startsWith('auth/'),base=a?S:S+'/rest/v1',fp=a?p.replace('auth/',''):p,res=await fetch(base+'/'+fp,{method:r.method,headers:{apikey:K,'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:r.method!=='GET'?await r.text():undefined});const txt=await res.text();return new Response(txt,{status:res.status,headers:{...C,'Content-Type':'application/json'}});}};";
+function showProxySetupDialog(onSuccess){
+  const existing = document.getElementById('supa-proxy-overlay');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'supa-proxy-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;';
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1a1408,#0e0c06);border:1px solid #c9a84c;border-radius:14px;padding:24px;max-width:360px;width:100%;box-shadow:0 0 40px rgba(0,0,0,0.9);">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:12px;color:#f0d080;text-align:center;margin-bottom:4px;">🔒 Configurar Proxy</div>
+      <div style="font-size:11px;color:#d4c49a;opacity:0.7;text-align:center;margin-bottom:16px;font-family:'Lato',sans-serif;">A rede do Supabase bloqueia acesso direto.<br>Configure um proxy gratuito para funcionar.</div>
+
+      <div style="background:#0a0805;border-radius:8px;padding:12px;border:1px solid #3a2a0e;margin-bottom:14px;">
+        <div style="font-family:'Cinzel',serif;font-size:9px;color:#c9a84c;letter-spacing:1px;margin-bottom:8px;">PASSO 1 — Criar Worker (2 min)</div>
+        <div style="font-size:11px;color:#d4c49a;line-height:1.7;font-family:'Lato',sans-serif;">
+          1. Acesse <strong style="color:#88bbdd;">workers.cloudflare.com</strong><br>
+          2. Crie conta gratuita (sem cartão)<br>
+          3. Clique <strong>"Create Application" → "Worker"</strong><br>
+          4. Cole o código abaixo e clique <strong>"Deploy"</strong>
+        </div>
+        <div style="margin-top:8px;background:#050402;border-radius:6px;padding:8px;font-size:10px;color:#88bbdd;font-family:monospace;word-break:break-all;cursor:pointer;" onclick="const el=document.getElementById('worker-code-text');navigator.clipboard?.writeText(el?.dataset.code||'');this.style.color='#88dd88';" title="Clique para copiar">
+<span id="worker-code-text" data-code="const S='https://zlsnqewkhaaubqbbbclf.supabase.co',K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsc25xZXdraGFhdWJxYmJiY2xmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NzM2NzEsImV4cCI6MjA5MzA0OTY3MX0.ypPE_7om0eJ5kixt_g9-ab6v66YhLUQ9Zv9ibiO8K1A',C={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*'};export default{async fetch(r){if(r.method==='OPTIONS')return new Response(null,{status:204,headers:C});const u=new URL(r.url),p=u.searchParams.get('path'),t=u.searchParams.get('token')||K;if(!p)return new Response('{}',{headers:C});const a=p.startsWith('auth/'),base=a?S:S+'/rest/v1',fp=a?p.replace('auth/',''):p,res=await fetch(base+'/'+fp,{method:r.method,headers:{apikey:K,'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:r.method!=='GET'?await r.text():undefined});const txt=await res.text();return new Response(txt,{status:res.status,headers:{...C,'Content-Type':'application/json'}});}};"></span></div>
+        </div>
+        <div style="font-size:10px;color:#c9a84c;opacity:0.6;margin-top:4px;font-family:'Lato',sans-serif;">Clique no código para copiar</div>
+      </div>
+
+      <div style="background:#0a0805;border-radius:8px;padding:12px;border:1px solid #3a2a0e;margin-bottom:14px;">
+        <div style="font-family:'Cinzel',serif;font-size:9px;color:#c9a84c;letter-spacing:1px;margin-bottom:8px;">PASSO 2 — Colar URL do Worker</div>
+        <div style="font-size:11px;color:#d4c49a;margin-bottom:8px;font-family:'Lato',sans-serif;">Após deploy, copie a URL (ex: <span style="color:#88bbdd;">https://md2-proxy.SEU-NOME.workers.dev</span>) e cole abaixo:</div>
+        <input id="proxy-url-input" type="url" placeholder="https://seu-worker.workers.dev" value="${PROXY_URL||''}"
+          style="width:100%;padding:9px;border-radius:7px;border:1px solid #5a4a1e;background:#050402;color:#d4c49a;font-size:12px;box-sizing:border-box;font-family:'Lato',sans-serif;">
+      </div>
+
+      <div id="proxy-err" style="color:#ee6644;font-size:11px;text-align:center;margin-bottom:8px;display:none;font-family:'Lato',sans-serif;"></div>
+      <button onclick="saveProxyAndRetry()" style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,#2a1a08,#1a0e04);border:1px solid #c9a84c;color:#f0d080;font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;cursor:pointer;margin-bottom:6px;">⚔ SALVAR E TENTAR NOVAMENTE</button>
+      <button onclick="document.getElementById('supa-proxy-overlay').remove()" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:none;color:#d4c49a;opacity:0.35;font-family:'Lato',sans-serif;font-size:11px;cursor:pointer;">Cancelar</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay._onSuccess = onSuccess;
+  // Populate worker code display
+  const wct = document.getElementById('worker-code-text');
+  if(wct){ wct.textContent = WORKER_CODE; wct.dataset.code = WORKER_CODE; }
+}
+
+async function saveProxyAndRetry(){
+  const input = document.getElementById('proxy-url-input');
+  const err = document.getElementById('proxy-err');
+  const url = input?.value.trim();
+  if(!url){ err.style.display='block'; err.textContent='Cole a URL do Worker.'; return; }
+
+  // Test the proxy
+  err.style.display='block'; err.style.color='#88bbdd'; err.textContent='Testando conexão...';
+  try {
+    const testRes = await fetch(`${url}?path=${encodeURIComponent('global_cards?select=name&limit=1')}`);
+    const text = await testRes.text();
+    if(text.includes('Host not in allowlist')){ throw new Error('Proxy não está funcionando — verifique a URL'); }
+    // Success
+    PROXY_URL = url;
+    try { localStorage.setItem('md2_proxy_url', url); } catch(e){}
+    const ov = document.getElementById('supa-proxy-overlay');
+    const cb = ov?._onSuccess;
+    ov?.remove();
+    if(cb) cb();
+  } catch(e){
+    err.style.color='#ee6644'; err.textContent = e.message || 'Erro ao testar proxy.';
+  }
+}
+
+function showSupaLoginDialog(onSuccess){
+  const existing = document.getElementById('supa-login-overlay');
+  if(existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'supa-login-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1a1408,#0e0c06);border:1px solid #c9a84c;border-radius:14px;padding:28px 24px;max-width:320px;width:90%;box-shadow:0 0 40px rgba(0,0,0,0.9);">
+      <div style="font-family:'Cinzel Decorative',serif;font-size:13px;color:#f0d080;text-align:center;margin-bottom:4px;">🔐 Portal Massive</div>
+      <div style="font-size:11px;color:#d4c49a;opacity:0.65;text-align:center;margin-bottom:18px;font-family:'Lato',sans-serif;">Entre para sortear cartas do baralho</div>
+      <input id="supa-email" type="email" placeholder="E-mail" style="width:100%;padding:10px;border-radius:8px;border:1px solid #5a4a1e;background:#0a0805;color:#d4c49a;font-size:13px;margin-bottom:8px;box-sizing:border-box;font-family:'Lato',sans-serif;">
+      <input id="supa-pass" type="password" placeholder="Senha" style="width:100%;padding:10px;border-radius:8px;border:1px solid #5a4a1e;background:#0a0805;color:#d4c49a;font-size:13px;margin-bottom:14px;box-sizing:border-box;font-family:'Lato',sans-serif;" onkeydown="if(event.key==='Enter')doSupaLogin()">
+      <div id="supa-login-err" style="color:#ee6644;font-size:11px;text-align:center;margin-bottom:8px;display:none;font-family:'Lato',sans-serif;"></div>
+      <button id="supa-login-btn" onclick="doSupaLogin()" style="width:100%;padding:11px;border-radius:8px;background:linear-gradient(135deg,#2a1a08,#1a0e04);border:1px solid #c9a84c;color:#f0d080;font-family:'Cinzel',serif;font-size:11px;letter-spacing:1px;cursor:pointer;margin-bottom:6px;">⚔ ENTRAR</button>
+      <button onclick="document.getElementById('supa-login-overlay').remove()" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:none;color:#d4c49a;opacity:0.35;font-family:'Lato',sans-serif;font-size:11px;cursor:pointer;">Cancelar</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay._onSuccess = onSuccess;
+}
+
+async function doSupaLogin(){
+  const btn = document.getElementById('supa-login-btn');
+  const err = document.getElementById('supa-login-err');
+  const email = document.getElementById('supa-email').value.trim();
+  const pass  = document.getElementById('supa-pass').value;
+  if(!email||!pass){ err.style.display='block'; err.textContent='Preencha e-mail e senha.'; return; }
+  btn.textContent='Entrando...'; btn.disabled=true;
+  try {
+    await supaSignIn(email, pass);
+    const ov = document.getElementById('supa-login-overlay');
+    const cb = ov?._onSuccess;
+    ov?.remove();
+    if(cb) cb();
+  } catch(e) {
+    err.style.display='block';
+    if(e.message==='NETWORK_BLOCKED'){
+      err.textContent='Rede bloqueada no Supabase. Veja Project Settings → Networking.';
+    } else {
+      err.textContent=e.message;
+    }
+    btn.textContent='⚔ ENTRAR'; btn.disabled=false;
+  }
+}
+
+// Pile indices: Turba 0-5, Vagante 6-11
+// Tier → pile offset: tier1=0-1 (1-2), tier2=2 (3-4→index 1 or 2), tier3=2 (5), tier4=3-4 (6-7,8-9), tier5=5 (10)
+// Mapping by max hero level:
+// level 1-2 → pile 0 (Turba 1-2) / pile 6 (Vagante 1-2)
+// level 3-4 → pile 1 or 2 (Turba 3-4 or 5) / pile 7-8
+// level 5   → pile 5 (Turba 10) / pile 11
+
+function getHordePileIndex(){
+  const maxLvl = players.reduce((m,p)=>Math.max(m,p.level),1);
+  if(maxLvl >= 10) return 5;
+  if(maxLvl >= 8)  return 4;
+  if(maxLvl >= 6)  return 3;
+  if(maxLvl >= 5)  return 2;
+  if(maxLvl >= 3)  return 1;
+  return 0;
+}
+
+function getRoamingPileIndex(){
+  return getHordePileIndex() + 6; // vagante starts at 6
+}
+
+// Cache de backs de pilhas
+const _pileBackCache = {};
+
+async function fetchPileBack(pileIndex){
+  if(_pileBackCache[pileIndex] !== undefined) return _pileBackCache[pileIndex];
+  try {
+    const key = `pile_back_${pileIndex}`;
+    const result = await supaFetch(`global_settings?key=eq.${key}&select=value`);
+    if(result.needAuth || result.networkBlocked) { _pileBackCache[pileIndex] = null; return null; }
+    const url = result.data?.[0]?.value || null;
+    _pileBackCache[pileIndex] = url;
+    return url;
+  } catch(e) { _pileBackCache[pileIndex] = null; return null; }
+}
+
+async function fetchExpansions(){
+  try {
+    const result = await supaFetch('expansions?select=id,name,position&order=position.asc');
+    if(result.needAuth || result.networkBlocked) return [];
+    return result.data || [];
+  } catch(e){ console.error('fetchExpansions:', e); return []; }
+}
+
+async function fetchCardsFromPile(pileIndex, expansionFilter=null){
+  try {
+    let path = `global_cards?pile_index=eq.${pileIndex}&select=id,name,image_url,expansion`;
+    if(expansionFilter && expansionFilter.length > 0){
+      const names = expansionFilter.map(e => `"${e}"`).join(',');
+      path += `&expansion=in.(${names})`;
+    }
+    const result = await supaFetch(path);
+    if(result.networkBlocked) return 'blocked';
+    if(result.needAuth) return null;
+    return result.data || [];
+  } catch(e) {
+    console.error('fetchCardsFromPile error:', e);
+    return [];
+  }
+}
+
+function pickRandomCard(cards, activeNames){
+  const available = cards.filter(c => !activeNames.includes(c.name));
+  if(available.length === 0) return cards[Math.floor(Math.random()*cards.length)] || null;
+  return available[Math.floor(Math.random()*available.length)];
+}
+
+// ===== SPAWN HORDE — from Portal Massive deck =====
+
+function openSpawnMonster(){ openOverlay('overlay-spawn-type'); }
+
+async function spawnHorde(fromTrack){
   if(!fromTrack) closeOverlay('overlay-spawn-type');
-  const tier=getHordeTier();
-  const ts=getTierStyle(tier);
-  const activeNames=getActiveMonsterNames();
-  const available=HORDES_ALL.filter(h=>!activeNames.includes(h.name));
-  if(available.length===0){ setInfo('Todas as Turbas únicas já estão ativas!'); if(fromTrack){afterEvent();} return; }
-  const base=available[Math.floor(Math.random()*available.length)];
-  const t=base.tiers[tier-1];
+  const tier=getHordeTier(), ts=getTierStyle(tier);
+  const pileIndex=getHordePileIndex();
+  const PNAMES=["Turba 1-2","Turba 3-4","Turba 5","Turba 6-7","Turba 8-9","Turba 10","Vagante 1-2","Vagante 3-4","Vagante 5","Vagante 6-7","Vagante 8-9","Vagante 10"];
   const count=players.length||1;
-  const minions=Array.from({length:count},()=>({hp:t.hp,maxHp:t.hp,defense:t.defense}));
+
+  // Busca back e cartas em paralelo
+  openOverlay('overlay-horde-spawned');
+  document.getElementById('horde-spawn-icon').textContent='⏳';
+  document.getElementById('horde-spawn-name').textContent='Sorteando Turba...';
+  document.getElementById('horde-spawn-body').innerHTML=`<span style="opacity:0.5;">Buscando do baralho ${PNAMES[pileIndex]}...</span>`;
+
+  const [cards, backUrl] = await Promise.all([fetchCardsFromPile(pileIndex, activeExpansionFilter), fetchPileBack(pileIndex)]);
+  console.log('[MD2] spawnHorde cards:', cards, 'backUrl:', backUrl, 'pileIndex:', pileIndex, 'filter:', activeExpansionFilter);
+
+  // Show back while processing
+  if(backUrl) document.getElementById('horde-spawn-icon').innerHTML=`<img src="${backUrl}" style="width:130px;border-radius:12px;display:block;margin:0 auto 6px;box-shadow:0 0 16px rgba(0,0,0,0.7);">`;
+
+  if(cards==='blocked'){
+    closeOverlay('overlay-horde-spawned');
+    showProxySetupDialog(()=>spawnHorde(fromTrack));
+    return;
+  }
+  if(cards===null){closeOverlay('overlay-horde-spawned');showSupaLoginDialog(()=>spawnHorde(fromTrack));return;}
+  const card=pickRandomCard(cards,getActiveMonsterNames());
+
+  if(!card){
+    document.getElementById('horde-spawn-name').textContent='Baralho vazio!';
+    document.getElementById('horde-spawn-body').innerHTML=`<span style="color:#ee6644;">Nenhuma carta disponível no baralho ${PNAMES[pileIndex]}.</span>`;
+    if(fromTrack) document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+    return;
+  }
+
   const id=++monsterIdCounter;
+  // HP: default 3 per unit (score column not available)
+  const totalMinionHp = 3;
+  const totalLeaderHp = 3;
+
   activeMonsters.push({
-    uid:id, type:'horde', uid_base:base.id,
-    name:base.name, icon:base.icon, color:base.color,
-    tier, tierStyle:ts,
-    leader:{hp:t.hp,maxHp:t.hp,defense:t.defense,defenseType:t.defenseType},
-    minions, specialDesc:t.specialDesc, defenseType:t.defenseType,
-    defeated:false, killedBy:null, rewards:ts.rewards, roamingEpicDeck:0,
+    uid:id,type:'horde',uid_base:card.id,
+    name:card.name,icon:'🃏',color:ts.border,
+    tier,tierStyle:ts,
+    leader:{hp:totalLeaderHp,maxHp:totalLeaderHp,defense:1,defenseType:'blue'},
+    minions:Array.from({length:count},()=>({hp:totalMinionHp,maxHp:totalMinionHp,defense:1})),
+    specialDesc:'Veja as habilidades na carta sorteada.',
+    defenseType:'blue',defeated:false,killedBy:null,
+    rewards:ts.rewards,roamingEpicDeck:0,
+    cardImageUrl:card.image_url,
   });
   renderActiveMonsters();
-  const defStr=defenseLabel(t);
-  const sp_img=getPortrait(base.id,tier);
-  if(sp_img){document.getElementById('horde-spawn-icon').innerHTML=`<img src="${sp_img}" style="width:130px;height:130px;border-radius:14px;object-fit:cover;display:block;margin:0 auto 8px;box-shadow:0 0 16px rgba(0,0,0,0.7);">`;}
-  else{document.getElementById('horde-spawn-icon').textContent=base.icon;}
-  document.getElementById('horde-spawn-name').textContent=`${base.name} Invocados! ${ts.label}`;
+
+  const displayImg = card.image_url || backUrl;
+  document.getElementById('horde-spawn-icon').innerHTML = displayImg
+    ? `<img src="${displayImg}" onclick="openLightbox('${displayImg}')" style="width:150px;border-radius:14px;display:block;margin:0 auto 8px;box-shadow:0 0 20px rgba(0,0,0,0.8);cursor:zoom-in;" title="Clique para ampliar">`
+    : '🃏';
+  document.getElementById('horde-spawn-name').textContent=card.name;
   document.getElementById('horde-spawn-body').innerHTML=
-    `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${ts.label}</span><br>`+
-    `<strong style="color:var(--gold-light);">❤️ Vida:</strong> ${t.hp} por unidade<br>`+
-    `<strong style="color:var(--gold-light);">🛡 Defesa:</strong> ${formatDice(defStr)}<br>`+
-    `<strong style="color:var(--gold-light);">⚔️ Poder Especial:</strong> ${formatDice(t.specialDesc)}<br><br>`+
+    `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${PNAMES[pileIndex]} — ${ts.label}</span><br>`+
     `<strong style="color:#dd6666;">👥 Lacaios:</strong> ${count} (1 por jogador)<br>`+
     `<strong style="color:#dd6666;">👑 Líder:</strong> aparece após todos os lacaios morrerem<br>`+
     (ts.rewards>1?`<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${ts.rewards} tesouros ao derrotar!`:'');
-  if(fromTrack){
-    document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
-  }
-  openOverlay('overlay-horde-spawned');
+  const btn=document.getElementById('overlay-horde-spawned').querySelector('.btn-ok');
+  btn.onclick=fromTrack?()=>{closeOverlay('overlay-horde-spawned');afterEvent();}:()=>{closeOverlay('overlay-horde-spawned');};
 }
+
+async function spawnRoaming(fromTrack){
+  if(!fromTrack) closeOverlay('overlay-spawn-type');
+  const tier=getHordeTier(),ts=getTierStyle(tier);
+  const pileIndex=getRoamingPileIndex();
+  const PNAMES=["Turba 1-2","Turba 3-4","Turba 5","Turba 6-7","Turba 8-9","Turba 10","Vagante 1-2","Vagante 3-4","Vagante 5","Vagante 6-7","Vagante 8-9","Vagante 10"];
+  const count=players.length||1;
+
+  openOverlay('overlay-horde-spawned');
+  document.getElementById('horde-spawn-icon').textContent='⏳';
+  document.getElementById('horde-spawn-name').textContent='Sorteando Vagante...';
+  document.getElementById('horde-spawn-body').innerHTML=`<span style="opacity:0.5;">Buscando do baralho ${PNAMES[pileIndex]}...</span>`;
+
+  const [cards, backUrl] = await Promise.all([fetchCardsFromPile(pileIndex, activeExpansionFilter), fetchPileBack(pileIndex)]);
+  if(backUrl) document.getElementById('horde-spawn-icon').innerHTML=`<img src="${backUrl}" style="width:130px;border-radius:12px;display:block;margin:0 auto 6px;box-shadow:0 0 16px rgba(0,0,0,0.7);">`;
+
+  if(cards==='blocked'){
+    closeOverlay('overlay-horde-spawned');
+    showProxySetupDialog(()=>spawnRoaming(fromTrack));
+    return;
+  }
+  if(cards === null){
+    closeOverlay('overlay-horde-spawned');
+    showSupaLoginDialog(()=>spawnRoaming(fromTrack));
+    return;
+  }
+  const card=pickRandomCard(cards,getActiveMonsterNames());
+
+  if(!card){
+    document.getElementById('horde-spawn-name').textContent='Baralho vazio!';
+    document.getElementById('horde-spawn-body').innerHTML=`<span style="color:#ee6644;">Nenhuma carta disponível no baralho ${PNAMES[pileIndex]}.</span>`;
+    if(fromTrack) document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+    return;
+  }
+
+  // HP: default 5 per player
+  const totalHp = 5 * count;
+  let roamingReward='2 tesouros + 1 item Raro do deck';
+  if(tier===3) roamingReward='3 itens Épicos do deck';
+  else if(tier===2) roamingReward='2 tesouros + 1 item Épico do deck';
+
+  const id=++monsterIdCounter;
+  activeMonsters.push({
+    uid:id,type:'roaming',uid_base:card.id,
+    name:card.name,icon:'🃏',color:ts.border,
+    tier,tierStyle:ts,
+    leader:{hp:totalHp,maxHp:totalHp},
+    minions:[],
+    specialDesc:'Veja as habilidades especiais na carta de referência.',
+    attack:'Veja a carta',defense:'Veja a carta',
+    xpKiller:5,xpOthers:4,
+    bagRewards:2,epicDeck:tier===3?3:tier===2?1:0,
+    rareMsg:tier===1?'Busque 1 item Raro do deck.':tier===2?'Busque 1 item Épico do deck.':'',
+    defeated:false,killedBy:null,
+    cardImageUrl:card.image_url,
+  });
+  renderActiveMonsters();
+
+  const displayImg = card.image_url || backUrl;
+  document.getElementById('horde-spawn-icon').innerHTML = displayImg
+    ? `<img src="${displayImg}" onclick="openLightbox('${displayImg}')" style="width:150px;border-radius:14px;display:block;margin:0 auto 8px;box-shadow:0 0 20px rgba(0,0,0,0.8);cursor:zoom-in;" title="Clique para ampliar">`
+    : '🃏';
+  document.getElementById('horde-spawn-name').textContent=`${card.name} Aparece!`;
+  document.getElementById('horde-spawn-body').innerHTML=
+    `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${PNAMES[pileIndex]} — ${ts.label}</span><br>`+
+    `<strong style="color:var(--gold-light);">❤️ Vida:</strong> 5 × ${count} = <strong style="color:#ee8888;">${totalHp} total</strong><br>`+
+    `<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${roamingReward}`;
+  const spBtn=document.getElementById('overlay-horde-spawned').querySelector('.btn-ok');
+  spBtn.onclick=fromTrack?()=>{closeOverlay('overlay-horde-spawned');afterEvent();}:()=>{closeOverlay('overlay-horde-spawned');};
+}
+
 
 // ===== MONSTER INFO POPUP =====
 function showMonsterInfo(uid){
@@ -1734,7 +2225,7 @@ function showMonsterInfo(uid){
   const isRoaming=m.type==='roaming';
 
   // ---- Portrait ----
-  const p_img=getPortrait(m.uid_base,m.tier);
+  const p_img=m.cardImageUrl||getPortrait(m.uid_base,m.tier);
   if(p_img){
     document.getElementById('minfo-icon').innerHTML=
       `<img src="${p_img}" style="width:180px;height:180px;border-radius:14px;object-fit:cover;`+
@@ -1811,7 +2302,7 @@ function renderActiveMonsters(){
       const hpPct=Math.round(m.leader.hp/m.leader.maxHp*100);
       card.innerHTML=`
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:8px;">
-          ${getPortrait(m.uid_base,m.tier)?`<img src="${getPortrait(m.uid_base,m.tier)}" style="width:90px;height:90px;border-radius:12px;object-fit:cover;box-shadow:0 0 12px ${ts.glow};border:2px solid ${ts.border};">`:`<span style="font-size:28px;">${m.icon}</span>`}
+          ${(m.cardImageUrl||getPortrait(m.uid_base,m.tier))?`<img src="${m.cardImageUrl||getPortrait(m.uid_base,m.tier)}" style="width:90px;height:90px;border-radius:12px;object-fit:cover;box-shadow:0 0 12px ${ts.glow};border:2px solid ${ts.border};">`:`<span style="font-size:28px;">${m.icon}</span>`}
           <div style="text-align:center;">
             <div style="font-family:'Cinzel',serif;font-size:11px;color:#ee8888;">${m.name} ${badge}</div>
             <div style="font-size:9px;color:var(--parchment);opacity:0.5;margin-top:1px;">Toque para ver atributos</div>
@@ -1844,7 +2335,7 @@ function renderActiveMonsters(){
       const lDead=m.leader.hp<=0;
       card.innerHTML=`
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:8px;">
-          ${getPortrait(m.uid_base,m.tier)?`<img src="${getPortrait(m.uid_base,m.tier)}" style="width:90px;height:90px;border-radius:12px;object-fit:cover;box-shadow:0 0 12px ${ts.glow};border:2px solid ${ts.border};">`:`<span style="font-size:28px;">${m.icon}</span>`}
+          ${(m.cardImageUrl||getPortrait(m.uid_base,m.tier))?`<img src="${m.cardImageUrl||getPortrait(m.uid_base,m.tier)}" style="width:90px;height:90px;border-radius:12px;object-fit:cover;box-shadow:0 0 12px ${ts.glow};border:2px solid ${ts.border};">`:`<span style="font-size:28px;">${m.icon}</span>`}
           <div style="text-align:center;">
             <div style="font-family:'Cinzel',serif;font-size:11px;color:${m.color};">${m.name} ${badge}</div>
             <div style="font-size:9px;color:var(--parchment);opacity:0.5;margin-top:1px;">Toque para ver habilidades</div>
@@ -2683,6 +3174,21 @@ function showDoorDiscard(){
 
 // ===== OVERLAY HELPERS =====
 function openOverlay(id){document.getElementById(id).classList.add('open');}
+function openLightbox(src){
+  const lb = document.getElementById('lightbox-overlay');
+  const img = document.getElementById('lightbox-img');
+  if(!lb || !img || !src) return;
+  img.src = src;
+  lb.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox(){
+  const lb = document.getElementById('lightbox-overlay');
+  if(lb) lb.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 function closeOverlay(id){document.getElementById(id).classList.remove('open');}
 
 // ===== RESET =====

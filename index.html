@@ -770,19 +770,46 @@ async function loadExpansionsForSetup(){
   if(loading) loading.style.display='block';
   if(list) list.innerHTML='';
   expansionCardsCache = {};
+
   const exps = await fetchExpansions();
-  availableExpansions = exps;
   if(loading) loading.style.display='none';
 
   if(!exps || exps.length === 0){
+    availableExpansions = [];
     if(list) list.innerHTML=`<div style="text-align:center;padding:10px;">
       <div style="font-size:11px;color:#ee8844;font-family:'Lato',sans-serif;margin-bottom:6px;">⚠ Expansões não carregadas</div>
-      <div style="font-size:10px;color:var(--parchment);opacity:0.5;font-family:'Lato',sans-serif;">Configure o proxy Cloudflare para carregar expansões.<br>O jogo usará todas as cartas disponíveis.</div>
+      <div style="font-size:10px;color:var(--parchment);opacity:0.5;font-family:'Lato',sans-serif;">Configure o proxy Cloudflare ou libere as restrições de rede.</div>
     </div>`;
     activeExpansionFilter = null;
     return;
   }
-  selectedExpansions = new Set(exps.map(e => e.name));
+
+  // Pre-load card counts for all expansions in parallel
+  if(list) list.innerHTML='<div style="font-size:10px;color:var(--parchment);opacity:0.5;font-family:\'Lato\',sans-serif;text-align:center;padding:6px;">Verificando cartas...</div>';
+  await Promise.all(exps.map(async e => {
+    try {
+      const result = await supaFetch('global_cards?expansion=eq.'+encodeURIComponent(e.name)+'&select=id,pile_index');
+      if(result.data){
+        const turbas = result.data.filter(c=>c.pile_index>=0&&c.pile_index<=5);
+        const vagantes = result.data.filter(c=>c.pile_index>=6&&c.pile_index<=11);
+        expansionCardsCache[e.name] = {turbas, vagantes, total: result.data.length};
+      }
+    } catch(_){}
+  }));
+
+  // Only keep expansions that have cards
+  availableExpansions = exps.filter(e => {
+    const c = expansionCardsCache[e.name];
+    return c && c.total > 0;
+  });
+
+  if(availableExpansions.length === 0){
+    if(list) list.innerHTML='<div style="font-size:10px;color:var(--parchment);opacity:0.5;font-family:\'Lato\',sans-serif;text-align:center;padding:6px;">Nenhuma expansão com cartas encontrada.</div>';
+    activeExpansionFilter = null;
+    return;
+  }
+
+  selectedExpansions = new Set(availableExpansions.map(e => e.name));
   renderExpansionList();
 }
 
@@ -793,9 +820,12 @@ function renderExpansionList(){
   list.innerHTML = availableExpansions.map(e => {
     const sel = selectedExpansions.has(e.name);
     const cache = expansionCardsCache[e.name];
-    const countTag = cache
+    const total = cache ? cache.turbas.length + cache.vagantes.length : -1;
+    const countTag = total > 0
       ? `<span style="font-size:9px;color:var(--gold-dark);font-family:'Cinzel',serif;padding:1px 5px;border-radius:3px;background:rgba(201,168,76,0.1);">${cache.turbas.length}T · ${cache.vagantes.length}V</span>`
-      : '';
+      : total === 0
+        ? `<span style="font-size:9px;color:#666;font-family:'Cinzel',serif;">sem cartas</span>`
+        : '';
     const safeN = e.name.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     return `<div id="exp-row-${e.id}" style="border-radius:8px;border:1px solid ${sel?'var(--gold-dark)':'rgba(255,255,255,0.08)'};overflow:hidden;margin-bottom:4px;">
       <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${sel?'rgba(201,168,76,0.07)':'rgba(255,255,255,0.02)'};">
@@ -819,7 +849,10 @@ async function toggleExpansionPreview(name, id){
   if(!panel || !content) return;
   if(panel.style.display !== 'none'){ panel.style.display='none'; return; }
   panel.style.display = 'block';
-  if(expansionCardsCache[name]){ renderExpansionPreview(content, expansionCardsCache[name]); return; }
+  // Use pre-loaded cache from loadExpansionsForSetup
+  if(expansionCardsCache[name] && expansionCardsCache[name].hasOwnProperty('turbas')){
+    renderExpansionPreview(content, expansionCardsCache[name]); return;
+  }
   content.textContent = 'Carregando cartas...';
   try {
     const result = await supaFetch('global_cards?expansion=eq.'+encodeURIComponent(name)+'&select=id,name,image_url,pile_index&order=pile_index.asc');
@@ -829,15 +862,11 @@ async function toggleExpansionPreview(name, id){
     const cards = result.data || [];
     const turbas = cards.filter(c=>c.pile_index>=0&&c.pile_index<=5);
     const vagantes = cards.filter(c=>c.pile_index>=6&&c.pile_index<=11);
-    expansionCardsCache[name] = {turbas,vagantes};
-    renderExpansionList();
-    // reopen after re-render
-    const p2 = document.getElementById('exp-preview-'+id);
-    const c2 = document.getElementById('exp-preview-content-'+id);
-    if(p2) p2.style.display='block';
-    if(c2) renderExpansionPreview(c2,{turbas,vagantes});
+    expansionCardsCache[name] = {turbas, vagantes, total: cards.length};
+    renderExpansionPreview(content, {turbas, vagantes});
   } catch(e){ content.innerHTML='<span style="color:#ee6644;">Erro: '+e.message+'</span>'; }
 }
+
 
 function renderExpansionPreview(el, {turbas, vagantes}){
   if(!turbas.length && !vagantes.length){ el.innerHTML='<span style="opacity:0.5;">Nenhuma carta encontrada.</span>'; return; }
@@ -1048,16 +1077,8 @@ function renderPlayersSidebar(){
 
 function updatePlayerLevel(idx,lvl){
   players[idx].level=lvl;
-  // Refresh entire player card to show updated XP + level
-  const pcard = document.getElementById(`pcard-${idx}`);
-  if(pcard){
-    const p = players[idx];
-    const lvlEl = pcard.querySelector(`#plvl-${idx}`);
-    if(lvlEl) lvlEl.textContent = lvl;
-    // Update XP display inline
-    const xpEls = pcard.querySelectorAll('[data-xp-display]');
-    xpEls.forEach(el => el.textContent = `⭐${p.xp||0} XP`);
-  }
+  // Full re-render ensures XP and level are always in sync
+  renderPlayersSidebar();
 }
 
 function updateGizmoBtnState(idx){
@@ -1264,13 +1285,6 @@ function triggerEvent(ev){
     openOverlay('overlay-roaming');
   } else if(ev.type==='horde_activate'){
     spawnHorde(true);
-    document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{
-      closeOverlay('overlay-horde-spawned');
-      document.getElementById('roaming-title').textContent='Ativar as Turbas Geradas!';
-      document.getElementById('roaming-body').textContent='Ative cada Turba gerada agora. Os jogadores escolhem a ordem.';
-      document.getElementById('btn-roaming-ok').onclick=()=>{closeOverlay('overlay-roaming');afterEvent();};
-      openOverlay('overlay-roaming');
-    };
   } else if(ev.type==='roaming'){
     spawnRoaming(true);
   } else if(ev.type==='horde'){
@@ -2090,15 +2104,16 @@ async function fetchExpansions(){
 
 async function fetchCardsFromPile(pileIndex, expansionFilter=null){
   try {
-    let path = `global_cards?pile_index=eq.${pileIndex}&select=id,name,image_url,expansion`;
-    if(expansionFilter && expansionFilter.length > 0){
-      const names = expansionFilter.map(e => '"'+e+'"').join(',');
-      path += '&expansion=in.('+names+')';
-    }
-    const result = await supaFetch(path);
+    // Fetch all cards for this pile, filter client-side to avoid
+    // URL encoding issues with special chars in expansion names (& . , etc)
+    const result = await supaFetch(`global_cards?pile_index=eq.${pileIndex}&select=id,name,image_url,expansion`);
     if(result.networkBlocked) return 'blocked';
     if(result.needAuth) return null;
-    return result.data || [];
+    const cards = result.data || [];
+    if(expansionFilter && expansionFilter.length > 0){
+      return cards.filter(c => expansionFilter.includes(c.expansion));
+    }
+    return cards;
   } catch(e) {
     console.error('fetchCardsFromPile error:', e);
     return [];
@@ -2129,6 +2144,7 @@ function adjustHordeHp(delta){
 
 async function spawnHorde(fromTrack){
   if(!fromTrack) closeOverlay('overlay-spawn-type');
+  applyExpansionFilter(); // ensure filter is up-to-date
   const tier=getHordeTier(), ts=getTierStyle(tier);
   const pileIndex=getHordePileIndex();
   const PNAMES=["Turba 1-2","Turba 3-4","Turba 5","Turba 6-7","Turba 8-9","Turba 10","Vagante 1-2","Vagante 3-4","Vagante 5","Vagante 6-7","Vagante 8-9","Vagante 10"];
@@ -2141,7 +2157,7 @@ async function spawnHorde(fromTrack){
   document.getElementById('horde-spawn-body').innerHTML=`<span style="opacity:0.5;">Buscando do baralho ${PNAMES[pileIndex]}...</span>`;
 
   const [cards, backUrl] = await Promise.all([fetchCardsFromPile(pileIndex, activeExpansionFilter), fetchPileBack(pileIndex)]);
-  console.log('[MD2] spawnHorde cards:', cards, 'backUrl:', backUrl, 'pileIndex:', pileIndex, 'filter:', activeExpansionFilter);
+
 
   // Show back while processing
   if(backUrl) document.getElementById('horde-spawn-icon').innerHTML=`<img src="${backUrl}" style="width:130px;border-radius:12px;display:block;margin:0 auto 6px;box-shadow:0 0 16px rgba(0,0,0,0.7);">`;
@@ -2210,6 +2226,7 @@ async function spawnHorde(fromTrack){
 
 async function spawnRoaming(fromTrack){
   if(!fromTrack) closeOverlay('overlay-spawn-type');
+  applyExpansionFilter(); // ensure filter is up-to-date
   const tier=getHordeTier(),ts=getTierStyle(tier);
   const pileIndex=getRoamingPileIndex();
   const PNAMES=["Turba 1-2","Turba 3-4","Turba 5","Turba 6-7","Turba 8-9","Turba 10","Vagante 1-2","Vagante 3-4","Vagante 5","Vagante 6-7","Vagante 8-9","Vagante 10"];

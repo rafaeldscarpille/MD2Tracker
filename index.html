@@ -1030,7 +1030,7 @@ function renderPlayersSidebar(){
         <div class="player-level-row">
           <div class="player-level-label">NÍVEL</div>
           <div class="player-level-val" id="plvl-${i}">${p.level}</div>
-          <div style="font-size:9px;color:var(--gold-dark);font-family:'Cinzel',serif;">${xpTxt}</div>
+          <div data-xp-display style="font-size:9px;color:var(--gold-dark);font-family:'Cinzel',serif;">${xpTxt}</div>
         </div>
         ${gizmoBtnHtml}
         <div id="ginv-${i}">${invTxt}</div>
@@ -1048,8 +1048,16 @@ function renderPlayersSidebar(){
 
 function updatePlayerLevel(idx,lvl){
   players[idx].level=lvl;
-  const el=document.getElementById(`plvl-${idx}`);
-  if(el) el.textContent=lvl;
+  // Refresh entire player card to show updated XP + level
+  const pcard = document.getElementById(`pcard-${idx}`);
+  if(pcard){
+    const p = players[idx];
+    const lvlEl = pcard.querySelector(`#plvl-${idx}`);
+    if(lvlEl) lvlEl.textContent = lvl;
+    // Update XP display inline
+    const xpEls = pcard.querySelectorAll('[data-xp-display]');
+    xpEls.forEach(el => el.textContent = `⭐${p.xp||0} XP`);
+  }
 }
 
 function updateGizmoBtnState(idx){
@@ -2084,8 +2092,8 @@ async function fetchCardsFromPile(pileIndex, expansionFilter=null){
   try {
     let path = `global_cards?pile_index=eq.${pileIndex}&select=id,name,image_url,expansion`;
     if(expansionFilter && expansionFilter.length > 0){
-      const names = expansionFilter.map(e => `"${e}"`).join(',');
-      path += `&expansion=in.(${names})`;
+      const names = expansionFilter.map(e => '"'+e+'"').join(',');
+      path += '&expansion=in.('+names+')';
     }
     const result = await supaFetch(path);
     if(result.networkBlocked) return 'blocked';
@@ -2106,6 +2114,18 @@ function pickRandomCard(cards, activeNames){
 // ===== SPAWN HORDE — from Portal Massive deck =====
 
 function openSpawnMonster(){ openOverlay('overlay-spawn-type'); }
+
+
+function adjustHordeHp(delta){
+  const el = document.getElementById('horde-hp-val');
+  const tot = document.getElementById('horde-hp-total');
+  if(!el) return;
+  const count = players.length||1;
+  let val = parseInt(el.textContent||'3') + delta;
+  if(val < 1) val = 1;
+  el.textContent = val;
+  if(tot) tot.textContent = val * count;
+}
 
 async function spawnHorde(fromTrack){
   if(!fromTrack) closeOverlay('overlay-spawn-type');
@@ -2135,29 +2155,13 @@ async function spawnHorde(fromTrack){
   const card=pickRandomCard(cards,getActiveMonsterNames());
 
   if(!card){
-    document.getElementById('horde-spawn-name').textContent='Baralho vazio!';
-    document.getElementById('horde-spawn-body').innerHTML=`<span style="color:#ee6644;">Nenhuma carta disponível no baralho ${PNAMES[pileIndex]}.</span>`;
-    if(fromTrack) document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+    // No cards for this expansion/pile — silently skip
+    closeOverlay('overlay-horde-spawned');
+    if(fromTrack) afterEvent();
     return;
   }
 
   const id=++monsterIdCounter;
-  // HP: default 3 per unit (score column not available)
-  const totalMinionHp = 3;
-  const totalLeaderHp = 3;
-
-  activeMonsters.push({
-    uid:id,type:'horde',uid_base:card.id,
-    name:card.name,icon:'🃏',color:ts.border,
-    tier,tierStyle:ts,
-    leader:{hp:totalLeaderHp,maxHp:totalLeaderHp,defense:1,defenseType:'blue'},
-    minions:Array.from({length:count},()=>({hp:totalMinionHp,maxHp:totalMinionHp,defense:1})),
-    specialDesc:'Veja as habilidades na carta sorteada.',
-    defenseType:'blue',defeated:false,killedBy:null,
-    rewards:ts.rewards,roamingEpicDeck:0,
-    cardImageUrl:card.image_url,
-  });
-  renderActiveMonsters();
 
   const displayImg = card.image_url || backUrl;
   document.getElementById('horde-spawn-icon').innerHTML = displayImg
@@ -2168,9 +2172,40 @@ async function spawnHorde(fromTrack){
     `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${PNAMES[pileIndex]} — ${ts.label}</span><br>`+
     `<strong style="color:#dd6666;">👥 Lacaios:</strong> ${count} (1 por jogador)<br>`+
     `<strong style="color:#dd6666;">👑 Líder:</strong> aparece após todos os lacaios morrerem<br>`+
-    (ts.rewards>1?`<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${ts.rewards} tesouros ao derrotar!`:'');
+    (ts.rewards>1?`<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${ts.rewards} tesouros ao derrotar!<br>`:'<br>')+
+    `<div style="margin-top:10px;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;border:1px solid rgba(201,168,76,0.2);">
+      <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold-dark);letter-spacing:1px;margin-bottom:6px;">❤️ VIDA POR UNIDADE <span style="font-size:8px;opacity:0.6;">(veja na carta)</span></div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
+        <button onclick="adjustHordeHp(-1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #7a2a2a;color:#dd6666;font-size:16px;cursor:pointer;">−</button>
+        <span id="horde-hp-val" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#ee8888;min-width:32px;text-align:center;">3</span>
+        <button onclick="adjustHordeHp(1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #7a2a2a;color:#dd6666;font-size:16px;cursor:pointer;">+</button>
+        <span style="font-size:10px;color:var(--parchment);opacity:0.6;margin-left:4px;">× ${count} heróis = <strong style="color:#ee8888;" id="horde-hp-total">${3*count}</strong></span>
+      </div>
+      <div style="font-size:9px;color:var(--parchment);opacity:0.4;text-align:center;margin-top:4px;font-family:'Lato',sans-serif;">Se aparecer "/Herói", multiplique pelo nº de heróis</div>
+    </div>`;
+
+  // Store monster to finalize HP when user confirms
+  const pendingHordeMonster = {
+    uid:id, type:'horde', uid_base:card.id,
+    name:card.name, icon:'🃏', color:ts.border,
+    tier, tierStyle:ts,
+    specialDesc:'Veja as habilidades na carta sorteada.',
+    defenseType:'blue', defeated:false, killedBy:null,
+    rewards:ts.rewards, roamingEpicDeck:0,
+    cardImageUrl:card.image_url,
+    count,
+  };
+
   const btn=document.getElementById('overlay-horde-spawned').querySelector('.btn-ok');
-  btn.onclick=fromTrack?()=>{closeOverlay('overlay-horde-spawned');afterEvent();}:()=>{closeOverlay('overlay-horde-spawned');};
+  btn.onclick=()=>{
+    const hpVal = parseInt(document.getElementById('horde-hp-val')?.textContent)||3;
+    pendingHordeMonster.leader = {hp:hpVal, maxHp:hpVal, defense:1, defenseType:'blue'};
+    pendingHordeMonster.minions = Array.from({length:count},()=>({hp:hpVal, maxHp:hpVal, defense:1}));
+    activeMonsters.push(pendingHordeMonster);
+    renderActiveMonsters();
+    closeOverlay('overlay-horde-spawned');
+    if(fromTrack) afterEvent();
+  };
 }
 
 async function spawnRoaming(fromTrack){
@@ -2201,9 +2236,8 @@ async function spawnRoaming(fromTrack){
   const card=pickRandomCard(cards,getActiveMonsterNames());
 
   if(!card){
-    document.getElementById('horde-spawn-name').textContent='Baralho vazio!';
-    document.getElementById('horde-spawn-body').innerHTML=`<span style="color:#ee6644;">Nenhuma carta disponível no baralho ${PNAMES[pileIndex]}.</span>`;
-    if(fromTrack) document.getElementById('overlay-horde-spawned').querySelector('.btn-ok').onclick=()=>{closeOverlay('overlay-horde-spawned');afterEvent();};
+    closeOverlay('overlay-horde-spawned');
+    if(fromTrack) afterEvent();
     return;
   }
 
@@ -3232,7 +3266,7 @@ function resetGame(){
   activeMonsters=[]; monsterIdCounter=0; gameMode='simple'; selectedTrack='normal';
   doorDeck=[]; doorDiscard=[];
   activeExpansionFilter=null; availableExpansions=[]; selectedExpansions=new Set(); expansionCardsCache={};
-  PROXY_URL=null; try{localStorage.removeItem('md2_proxy_url');}catch(e){}
+  // PROXY_URL preserved — device-level setting, not game state
   document.getElementById('extra-track-section').style.display='';
   document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
   document.getElementById('game-screen').style.display='none';

@@ -131,9 +131,10 @@ body{
 .info-panel::after{content:'❧';position:absolute;right:9px;top:50%;transform:translateY(-50%) scaleX(-1);color:var(--gold-dark);font-size:14px;}
 
 /* overlays */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.86);z-index:100;justify-content:center;align-items:flex-start;backdrop-filter:blur(3px);overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .overlay.open{display:flex;}
-.popup{background:linear-gradient(160deg,#1e1a0e,#0e0c06);border:2px solid var(--gold-dark);border-radius:14px;padding:26px 30px;max-width:420px;width:92%;text-align:center;position:relative;box-shadow:0 0 40px rgba(0,0,0,0.9),0 0 70px rgba(201,168,76,0.1);animation:popIn 0.3s cubic-bezier(.34,1.56,.64,1);}
+.overlay-inner{width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:16px 0;}
+.popup{background:linear-gradient(160deg,#1e1a0e,#0e0c06);border:2px solid var(--gold-dark);border-radius:14px;padding:26px 30px;max-width:420px;width:92%;text-align:center;position:relative;box-shadow:0 0 40px rgba(0,0,0,0.9),0 0 70px rgba(201,168,76,0.1);animation:popIn 0.3s cubic-bezier(.34,1.56,.64,1);flex-shrink:0;}
 .popup::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,168,76,0.1);border-radius:10px;pointer-events:none;}
 .popup-icon{font-size:34px;margin-bottom:7px;}
 .popup-title{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold-light);margin-bottom:7px;text-shadow:0 0 14px var(--glow-gold);}
@@ -373,7 +374,7 @@ body{
 
 <!-- ===== OVERLAYS ===== -->
 <div class="overlay" id="overlay-roaming">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">💀</div>
@@ -382,10 +383,11 @@ body{
     <div class="popup-body" id="roaming-body"></div>
     <button class="btn-ok" id="btn-roaming-ok">Entendido</button>
   </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay-token">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon" id="token-icon">💎</div>
@@ -394,10 +396,11 @@ body{
     <div class="popup-body" id="token-popup-body"></div>
     <button class="btn-ok" id="btn-token-ok">OK</button>
   </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay-levelup-ask">
-  <div class="popup" style="max-width:460px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:460px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">⚔️</div>
@@ -411,10 +414,11 @@ body{
       <button class="btn-no" onclick="levelUpAsked=false;closeOverlay('overlay-levelup-ask')">Nenhum</button>
     </div>
   </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay-levelup-result">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon" id="levelup-result-icon">🏆</div>
@@ -423,10 +427,11 @@ body{
     <div class="popup-body" id="levelup-result-body"></div>
     <button class="btn-ok" id="btn-levelup-result-ok" onclick="closeOverlay('overlay-levelup-result')">OK</button>
   </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay-draw">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon" id="draw-icon">🎲</div>
@@ -436,10 +441,11 @@ body{
     <div class="popup-body" id="draw-flavor" style="margin-top:7px;"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-draw')">OK</button>
   </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay-empty">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">💀</div>
@@ -448,10 +454,11 @@ body{
     <div class="popup-body">A sacola não possui mais tokens de tesouro!</div>
     <button class="btn-ok" onclick="closeOverlay('overlay-empty')">Fechar</button>
   </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay-inspect">
-  <div class="popup" style="max-width:450px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:450px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">🎒</div>
@@ -465,11 +472,12 @@ body{
     </div>
     <button class="btn-ok" onclick="closeOverlay('overlay-inspect')">Fechar</button>
   </div>
+  </div>
 </div>
 
 <!-- GIZMO PICK (level 3: choose between 2 tokens) -->
 <div class="overlay" id="overlay-gizmo-pick">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">⚙️</div>
@@ -478,11 +486,12 @@ body{
     <div style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);opacity:0.7;margin-bottom:12px;">Dois tokens foram retirados da sacola. Escolha um para guardar — o outro retorna à sacola:</div>
     <div class="popup-options" id="gizmo-pick-options"></div>
   </div>
+  </div>
 </div>
 
 <!-- GIZMO RESULT -->
 <div class="overlay" id="overlay-gizmo-result">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">⚙️</div>
@@ -491,11 +500,12 @@ body{
     <div class="popup-body" id="gizmo-result-body" style="white-space:pre-line;"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-gizmo-result')">OK</button>
   </div>
+  </div>
 </div>
 
 <!-- GIZMO UPGRADE -->
 <div class="overlay" id="overlay-gizmo-upgrade">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">⚙️</div>
@@ -507,11 +517,12 @@ body{
       <button class="btn-no" id="btn-gizmo-no">Não agora</button>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- DICE ROLLER -->
 <div class="overlay" id="overlay-dice-roller">
-  <div class="popup" style="max-width:420px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:420px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">🎲</div>
@@ -562,11 +573,12 @@ body{
     </div>
     <button class="btn-ok" onclick="closeOverlay('overlay-dice-roller')" style="margin-top:8px;">Fechar</button>
   </div>
+  </div>
 </div>
 
 <!-- DOOR CARD -->
 <div class="overlay" id="overlay-door">
-  <div class="popup" style="max-width:320px;padding:16px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:320px;padding:16px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon" id="door-card-title" style="font-size:0;min-height:0;margin:0;padding:0;"></div>
@@ -574,11 +586,12 @@ body{
     <div id="door-discard-info" style="margin-top:12px;font-size:10px;font-family:'Cinzel',serif;letter-spacing:1px;color:var(--gold-dark);text-align:center;"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-door')">Entendido</button>
   </div>
+  </div>
 </div>
 
 <!-- DOOR DISCARD PILE -->
 <div class="overlay" id="overlay-door-discard">
-  <div class="popup" style="max-width:360px;padding:16px 14px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:360px;padding:16px 14px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">🃏</div>
@@ -592,9 +605,11 @@ body{
     <div id="discard-prev-cards" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-height:180px;overflow-y:auto;"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-door-discard')" style="margin-top:12px;">Fechar</button>
   </div>
+  </div>
 </div>
+
 <div class="overlay" id="overlay-tinv">
-  <div class="popup" style="max-width:400px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:400px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">⚙️</div>
@@ -609,11 +624,12 @@ body{
     <button id="tinv-use-btn" onclick="openUseGadgets()" style="width:100%;margin-bottom:8px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;padding:9px;border-radius:7px;cursor:pointer;background:linear-gradient(135deg,#0e2a28,#081a18);border:1px solid #2a8a7a;color:#44ddcc;text-transform:uppercase;transition:all 0.2s;">🔧 Utilizar Engenhocas</button>
     <button class="btn-ok" onclick="closeOverlay('overlay-tinv')">Fechar</button>
   </div>
+  </div>
 </div>
 
 <!-- USE GADGETS -->
 <div class="overlay" id="overlay-use-gadgets">
-  <div class="popup" style="max-width:400px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:400px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">🔧</div>
@@ -627,11 +643,12 @@ body{
       <button class="btn-no" onclick="closeOverlay('overlay-use-gadgets')">Cancelar</button>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- SPAWN MONSTER TYPE -->
 <div class="overlay" id="overlay-spawn-type">
-  <div class="popup">
+  <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">💀</div>
@@ -645,11 +662,12 @@ body{
       <button class="btn-no" onclick="closeOverlay('overlay-spawn-type')">Cancelar</button>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- HORDE RESULT -->
 <div class="overlay" id="overlay-horde-spawned">
-  <div class="popup" style="max-width:480px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:480px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon" id="horde-spawn-icon">👹</div>
@@ -658,11 +676,12 @@ body{
     <div id="horde-spawn-body" style="font-family:'IM Fell English',serif;font-size:13px;color:var(--parchment);line-height:1.7;margin-bottom:14px;text-align:left;"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-horde-spawned')">Entendido</button>
   </div>
+  </div>
 </div>
 
 <!-- ATTACK DAMAGE -->
 <div class="overlay" id="overlay-attack">
-  <div class="popup" style="max-width:420px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:420px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">⚔️</div>
@@ -681,11 +700,12 @@ body{
       <button class="btn-no" onclick="closeOverlay('overlay-attack')">Cancelar</button>
     </div>
   </div>
+  </div>
 </div>
 
 <!-- MONSTER INFO -->
-<div class="overlay" id="overlay-minfo" onclick="if(event.target===this)closeOverlay('overlay-minfo')">
-  <div class="popup" style="max-width:520px;width:96%;max-height:90vh;overflow-y:auto;padding:22px 20px 20px;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent;">
+<div class="overlay" id="overlay-minfo" onclick="if(event.target===this||event.target.classList.contains('overlay-inner'))closeOverlay('overlay-minfo')">
+  <div class="overlay-inner">  <div class="popup" style="max-width:520px;width:96%;max-height:90vh;overflow-y:auto;padding:22px 20px 20px;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <!-- Close X top-right -->
@@ -696,11 +716,12 @@ body{
     <div class="popup-body" id="minfo-body" style="text-align:left;font-size:13px;line-height:1.8;"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-minfo')" style="width:100%;margin-top:8px;">Fechar</button>
   </div>
+  </div>
 </div>
 
 <!-- KILL REWARD -->
 <div class="overlay" id="overlay-kill-reward">
-  <div class="popup" style="max-width:440px;">
+  <div class="overlay-inner">  <div class="popup" style="max-width:440px;">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
     <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
     <div class="popup-icon">🏆</div>
@@ -708,6 +729,7 @@ body{
     <div class="popup-separator"></div>
     <div class="popup-body" id="kill-reward-body"></div>
     <button class="btn-ok" onclick="closeOverlay('overlay-kill-reward')">OK</button>
+  </div>
   </div>
 </div>
 

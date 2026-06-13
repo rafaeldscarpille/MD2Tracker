@@ -363,6 +363,7 @@ body{
         <button class="btn" onclick="openDiceRoller()" style="background:linear-gradient(135deg,#1a0a2a,#0e0618);border-color:#7744aa;color:#bb88ff;">🎲 Rolar Dados</button>
         <button class="btn" onclick="drawDoorCard()" style="background:linear-gradient(135deg,#0a1a2a,#060e18);border-color:#3a6a9a;color:#88bbdd;position:relative;">🚪 Ação de Porta <span id="door-discard-badge" style="display:none;position:absolute;top:-6px;right:-6px;background:#3a6a9a;color:#fff;border-radius:10px;font-size:9px;padding:1px 5px;font-family:'Cinzel',serif;"></span></button>
         <button id="btn-door-discard" onclick="showDoorDiscard()" style="display:none;background:linear-gradient(135deg,#0a1218,#060a0e);border:1px solid #2a4a6a;border-radius:8px;color:#6699bb;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:8px 10px;cursor:pointer;text-transform:uppercase;">🃏 Descarte</button>
+        <button class="btn" onclick="openObjectiveCollect()" style="background:linear-gradient(135deg,#1a1a08,#0c0c04);border-color:#8a8a3a;color:#dddd88;">🏆 Coletar Objetivo</button>
         <button class="btn btn-reset" onclick="resetGame()">↺ Reiniciar</button>
       </div>
       <!-- ACTIVE MONSTERS PANEL -->
@@ -698,6 +699,30 @@ body{
     <div class="yes-no-btns">
       <button class="btn-yes" onclick="applyDamage()">Aplicar Dano</button>
       <button class="btn-no" onclick="closeOverlay('overlay-attack')">Cancelar</button>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- COLETAR OBJETIVO -->
+<div class="overlay" id="overlay-objective">
+  <div class="overlay-inner">  <div class="popup" style="max-width:400px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-icon">🏆</div>
+    <div class="popup-title">Coletar Objetivo</div>
+    <div class="popup-separator"></div>
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--parchment);opacity:0.6;margin-bottom:8px;letter-spacing:1px;">QUANTO DE XP O OBJETIVO DÁ?</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px;">
+      <button onclick="changeObjXp(-1)" style="width:40px;height:40px;border-radius:50%;background:var(--dark-card);border:1px solid var(--gold-dark);color:var(--gold);font-size:20px;cursor:pointer;">−</button>
+      <div id="obj-xp-val" style="font-family:'Cinzel Decorative',serif;font-size:32px;color:var(--gold-light);min-width:50px;text-align:center;">5</div>
+      <button onclick="changeObjXp(1)" style="width:40px;height:40px;border-radius:50%;background:var(--dark-card);border:1px solid var(--gold-dark);color:var(--gold);font-size:20px;cursor:pointer;">+</button>
+    </div>
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--parchment);opacity:0.6;margin-bottom:14px;letter-spacing:1px;">QUEM COLETOU?</div>
+    <div id="obj-player-list" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:18px;"></div>
+    <div class="yes-no-btns">
+      <button class="btn-yes" onclick="confirmObjectiveCollect()">Coletar</button>
+      <button class="btn-no" onclick="closeOverlay('overlay-objective')">Cancelar</button>
     </div>
   </div>
   </div>
@@ -2467,6 +2492,44 @@ function buildAttackPlayerList(){
     btn.onclick=()=>{ currentAttackPlayerIdx=i; pl.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected')); btn.classList.add('selected'); };
     pl.appendChild(btn);
   });
+}
+
+// ===== COLETAR OBJETIVO =====
+let currentObjXp = 5, currentObjPlayerIdx = null;
+
+function openObjectiveCollect(){
+  currentObjXp = 5;
+  currentObjPlayerIdx = null;
+  document.getElementById('obj-xp-val').textContent = currentObjXp;
+  buildObjectivePlayerList();
+  openOverlay('overlay-objective');
+}
+
+function changeObjXp(delta){
+  currentObjXp = Math.max(0, currentObjXp + delta);
+  document.getElementById('obj-xp-val').textContent = currentObjXp;
+}
+
+function buildObjectivePlayerList(){
+  const pl = document.getElementById('obj-player-list'); pl.innerHTML = '';
+  players.forEach((p,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'option-btn'; btn.textContent = p.name;
+    btn.onclick = () => {
+      currentObjPlayerIdx = i;
+      pl.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    pl.appendChild(btn);
+  });
+}
+
+function confirmObjectiveCollect(){
+  if(currentObjPlayerIdx===null){ alert('Selecione quem coletou o objetivo.'); return; }
+  const p = players[currentObjPlayerIdx];
+  p.xp = (p.xp||0) + currentObjXp;
+  renderPlayersSidebar();
+  closeOverlay('overlay-objective');
 }
 
 // ===== DAMAGE & DEFEAT =====

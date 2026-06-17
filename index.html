@@ -337,6 +337,19 @@ body{
         <div class="players-section-title">Heróis</div>
         <div id="players-list"></div>
       </div>
+      <div class="players-section">
+        <div class="players-section-title" onclick="toggleIngameExpansionPanel()" style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
+          <span id="ingame-exp-toggle-icon">▸</span> Expansões
+        </div>
+        <div id="ingame-expansion-panel" style="display:none;margin-top:6px;">
+          <div id="ingame-expansion-loading" style="font-size:9px;color:var(--parchment);opacity:0.5;text-align:center;font-family:'Lato',sans-serif;padding:4px;">Carregando...</div>
+          <div id="ingame-expansion-list" style="display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;"></div>
+          <div style="display:flex;gap:5px;margin-top:6px;">
+            <button onclick="ingameSelectAllExpansions()" style="flex:1;font-family:'Cinzel',serif;font-size:8px;padding:4px;border-radius:5px;cursor:pointer;background:transparent;border:1px solid var(--gold-dark);color:var(--gold-dark);">Todas</button>
+            <button onclick="ingameClearAllExpansions()" style="flex:1;font-family:'Cinzel',serif;font-size:8px;padding:4px;border-radius:5px;cursor:pointer;background:transparent;border:1px solid #555;color:#888;">Nenhuma</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="center-content">
@@ -809,18 +822,35 @@ async function loadExpansionsForSetup(){
     return;
   }
 
-  // Pre-load card counts for all expansions in parallel
+  // Pre-load card counts for all expansions with ONE single query (avoids
+  // N parallel requests hitting rate limits / proxy timeouts, and avoids
+  // URL encoding issues with special characters like & in expansion names)
   if(list) list.innerHTML='<div style="font-size:10px;color:var(--parchment);opacity:0.5;font-family:\'Lato\',sans-serif;text-align:center;padding:6px;">Verificando cartas...</div>';
-  await Promise.all(exps.map(async e => {
-    try {
-      const result = await supaFetch('global_cards?expansion=eq.'+encodeURIComponent(e.name)+'&select=id,pile_index');
-      if(result.data){
-        const turbas = result.data.filter(c=>c.pile_index>=0&&c.pile_index<=5);
-        const vagantes = result.data.filter(c=>c.pile_index>=6&&c.pile_index<=11);
-        expansionCardsCache[e.name] = {turbas, vagantes, total: result.data.length};
-      }
-    } catch(_){}
-  }));
+  try {
+    const result = await supaFetch('global_cards?select=expansion,pile_index');
+    if(result.networkBlocked){
+      if(list) list.innerHTML = '<div style="text-align:center;padding:10px;"><div style="font-size:11px;color:#ee8844;font-family:\'Lato\',sans-serif;">⚠ Rede bloqueada</div></div>';
+      activeExpansionFilter = null;
+      return;
+    }
+    if(result.needAuth){
+      if(list) list.innerHTML = '<div style="text-align:center;padding:10px;"><div style="font-size:11px;color:#ee8844;font-family:\'Lato\',sans-serif;">⚠ Login necessário</div></div>';
+      activeExpansionFilter = null;
+      return;
+    }
+    const allCards = result.data || [];
+    exps.forEach(e => {
+      const cards = allCards.filter(c => c.expansion === e.name);
+      const turbas = cards.filter(c=>c.pile_index>=0&&c.pile_index<=5);
+      const vagantes = cards.filter(c=>c.pile_index>=6&&c.pile_index<=11);
+      expansionCardsCache[e.name] = {turbas, vagantes, total: cards.length};
+    });
+  } catch(err){
+    console.error('[MD2] loadExpansionsForSetup bulk fetch error:', err);
+    if(list) list.innerHTML = '<div style="text-align:center;padding:10px;"><div style="font-size:11px;color:#ee6644;font-family:\'Lato\',sans-serif;">Erro: '+err.message+'</div></div>';
+    activeExpansionFilter = null;
+    return;
+  }
 
   // Only keep expansions that have cards
   availableExpansions = exps.filter(e => {
@@ -880,11 +910,11 @@ async function toggleExpansionPreview(name, id){
   }
   content.textContent = 'Carregando cartas...';
   try {
-    const result = await supaFetch('global_cards?expansion=eq.'+encodeURIComponent(name)+'&select=id,name,image_url,pile_index&order=pile_index.asc');
+    const result = await supaFetch('global_cards?select=id,name,image_url,pile_index,expansion&order=pile_index.asc');
     if(result.needAuth || result.networkBlocked){
       content.innerHTML = '<span style="color:#ee8844;">Necessário login para ver as cartas.</span>'; return;
     }
-    const cards = result.data || [];
+    const cards = (result.data || []).filter(c => c.expansion === name);
     const turbas = cards.filter(c=>c.pile_index>=0&&c.pile_index<=5);
     const vagantes = cards.filter(c=>c.pile_index>=6&&c.pile_index<=11);
     expansionCardsCache[name] = {turbas, vagantes, total: cards.length};
@@ -960,6 +990,114 @@ function applyExpansionFilter(){
     activeExpansionFilter=Array.from(selectedExpansions);
 }
 
+// ===== IN-GAME EXPANSION SIDEBAR (collapsible, mid-game add/remove) =====
+let ingameExpansionLoaded = false;
+
+async function toggleIngameExpansionPanel(){
+  const panel = document.getElementById('ingame-expansion-panel');
+  const icon = document.getElementById('ingame-exp-toggle-icon');
+  if(!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if(isOpen){
+    panel.style.display = 'none';
+    if(icon) icon.textContent = '▸';
+    return;
+  }
+  panel.style.display = 'block';
+  if(icon) icon.textContent = '▾';
+  if(!ingameExpansionLoaded){
+    await loadIngameExpansions();
+    ingameExpansionLoaded = true;
+  }
+}
+
+async function loadIngameExpansions(){
+  const loading = document.getElementById('ingame-expansion-loading');
+  const list = document.getElementById('ingame-expansion-list');
+  if(loading) loading.style.display='block';
+  if(list) list.innerHTML='';
+
+  const exps = await fetchExpansions();
+  if(loading) loading.style.display='none';
+
+  if(!exps || exps.length === 0){
+    if(list) list.innerHTML='<div style="font-size:9px;color:#ee8844;text-align:center;font-family:Lato,sans-serif;padding:4px;">⚠ Não foi possível carregar</div>';
+    return;
+  }
+
+  // Single bulk query — avoids per-expansion requests and special-char URL issues
+  try {
+    const result = await supaFetch('global_cards?select=expansion,pile_index');
+    if(result.networkBlocked || result.needAuth){
+      if(list) list.innerHTML='<div style="font-size:9px;color:#ee8844;text-align:center;font-family:Lato,sans-serif;padding:4px;">⚠ Rede/login necessário</div>';
+      return;
+    }
+    const allCards = result.data || [];
+    exps.forEach(e => {
+      const cards = allCards.filter(c => c.expansion === e.name);
+      const turbas = cards.filter(c=>c.pile_index>=0&&c.pile_index<=5);
+      const vagantes = cards.filter(c=>c.pile_index>=6&&c.pile_index<=11);
+      expansionCardsCache[e.name] = {turbas, vagantes, total: cards.length};
+    });
+  } catch(err){
+    if(list) list.innerHTML='<div style="font-size:9px;color:#ee6644;text-align:center;font-family:Lato,sans-serif;">Erro: '+err.message+'</div>';
+    return;
+  }
+
+  // Only keep expansions that have cards; preserve existing selection if already set
+  const hadSelection = selectedExpansions.size > 0;
+  availableExpansions = exps.filter(e => {
+    const c = expansionCardsCache[e.name];
+    return c && c.total > 0;
+  });
+
+  if(!hadSelection){
+    selectedExpansions = new Set(availableExpansions.map(e => e.name));
+  }
+
+  renderIngameExpansionList();
+}
+
+function renderIngameExpansionList(){
+  const list = document.getElementById('ingame-expansion-list');
+  if(!list) return;
+  if(availableExpansions.length === 0){
+    list.innerHTML = '<div style="font-size:9px;color:var(--parchment);opacity:0.5;text-align:center;font-family:Lato,sans-serif;padding:4px;">Nenhuma expansão com cartas.</div>';
+    return;
+  }
+  list.innerHTML = availableExpansions.map(e => {
+    const sel = selectedExpansions.has(e.name);
+    const cache = expansionCardsCache[e.name];
+    const countTag = cache ? `${cache.turbas.length}T·${cache.vagantes.length}V` : '';
+    const safeN = e.name.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    return `<label style="display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:6px;cursor:pointer;background:${sel?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.02)'};border:1px solid ${sel?'var(--gold-dark)':'rgba(255,255,255,0.06)'};">
+      <input type="checkbox" ${sel?'checked':''} onchange="ingameToggleExpansion('${safeN}',this.checked)"
+        style="width:13px;height:13px;cursor:pointer;accent-color:#c9a84c;flex-shrink:0;">
+      <span style="font-family:'Lato',sans-serif;font-size:10px;color:var(--parchment);flex:1;">${e.name}</span>
+      <span style="font-size:8px;color:var(--gold-dark);font-family:'Cinzel',serif;">${countTag}</span>
+    </label>`;
+  }).join('');
+}
+
+function ingameToggleExpansion(name, checked){
+  if(checked) selectedExpansions.add(name);
+  else selectedExpansions.delete(name);
+  applyExpansionFilter();
+  renderIngameExpansionList();
+}
+
+function ingameSelectAllExpansions(){
+  selectedExpansions = new Set(availableExpansions.map(e=>e.name));
+  applyExpansionFilter();
+  renderIngameExpansionList();
+}
+
+function ingameClearAllExpansions(){
+  selectedExpansions = new Set();
+  applyExpansionFilter();
+  renderIngameExpansionList();
+}
+
 function selectCount(n){
   selectedCount=n;
   document.querySelectorAll('.count-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===n));
@@ -1017,6 +1155,8 @@ function startGame(){
     });
   }
   applyExpansionFilter();
+  // Setup screen already loaded expansions/cache — reuse for in-game sidebar
+  if(availableExpansions.length > 0) ingameExpansionLoaded = true;
   document.getElementById('setup-screen').style.display='none';
   document.getElementById('game-screen').style.display='block';
   const isSimple = gameMode==='simple'||gameMode==='hard-simple';
@@ -3367,7 +3507,7 @@ function resetGame(){
   pendingGizmoUpgrades=[]; gizmoPickIdx=-1; gizmoPickTokens=[];
   activeMonsters=[]; monsterIdCounter=0; gameMode='simple'; selectedTrack='normal';
   doorDeck=[]; doorDiscard=[];
-  activeExpansionFilter=null; availableExpansions=[]; selectedExpansions=new Set(); expansionCardsCache={};
+  activeExpansionFilter=null; availableExpansions=[]; selectedExpansions=new Set(); expansionCardsCache={}; ingameExpansionLoaded=false;
   // PROXY_URL preserved — device-level setting, not game state
   document.getElementById('extra-track-section').style.display='';
   document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));

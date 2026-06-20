@@ -1080,28 +1080,98 @@ function renderIngameExpansionList(){
   const list = document.getElementById('exp-overlay-list') || document.getElementById('ingame-expansion-list');
   if(!list) return;
   if(availableExpansions.length === 0){
-    list.innerHTML = '<div style="font-size:9px;color:var(--parchment);opacity:0.5;text-align:center;font-family:Lato,sans-serif;padding:4px;">Nenhuma expansão com cartas.</div>';
+    list.innerHTML = '<div style="font-size:11px;color:var(--parchment);opacity:0.5;text-align:center;font-family:Lato,sans-serif;padding:8px;">Nenhuma expansão com cartas encontrada.</div>';
     return;
   }
   list.innerHTML = availableExpansions.map(e => {
     const sel = selectedExpansions.has(e.name);
     const cache = expansionCardsCache[e.name];
-    const countTag = cache ? `${cache.turbas.length}T·${cache.vagantes.length}V` : '';
+    const countTag = cache ? `${cache.turbas.length}T · ${cache.vagantes.length}V` : '';
     const safeN = e.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    return `<label style="display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:6px;cursor:pointer;background:${sel?'rgba(201,168,76,0.08)':'rgba(255,255,255,0.02)'};border:1px solid ${sel?'var(--gold-dark)':'rgba(255,255,255,0.06)'};">
-      <input type="checkbox" ${sel?'checked':''} onchange="ingameToggleExpansion('${safeN}',this.checked)"
-        style="width:13px;height:13px;cursor:pointer;accent-color:#c9a84c;flex-shrink:0;">
-      <span style="font-family:'Lato',sans-serif;font-size:10px;color:var(--parchment);flex:1;">${e.name}</span>
-      <span style="font-size:8px;color:var(--gold-dark);font-family:'Cinzel',serif;">${countTag}</span>
-    </label>`;
+    const safeId = e.id.replace(/-/g,'_');
+    return `<div id="iexp-row-${safeId}" style="border-radius:8px;border:1px solid ${sel?'var(--gold-dark)':'rgba(255,255,255,0.08)'};overflow:hidden;margin-bottom:2px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:${sel?'rgba(201,168,76,0.07)':'rgba(255,255,255,0.02)'};">
+        <input type="checkbox" ${sel?'checked':''} onchange="ingameToggleExpansion('${safeN}',this.checked,'${safeId}')"
+          style="width:15px;height:15px;cursor:pointer;accent-color:#c9a84c;flex-shrink:0;">
+        <span style="font-family:'Lato',sans-serif;font-size:11px;color:var(--parchment);flex:1;cursor:pointer;" onclick="ingameToggleExpansionPreview('${safeN}','${safeId}')">${e.name}</span>
+        <span style="font-size:9px;color:var(--gold-dark);font-family:'Cinzel',serif;">${countTag}</span>
+        <button onclick="ingameToggleExpansionPreview('${safeN}','${safeId}')" style="font-size:11px;padding:2px 7px;border-radius:5px;cursor:pointer;background:transparent;border:1px solid var(--gold-dark);color:var(--gold-dark);">👁</button>
+      </div>
+      <div id="iexp-preview-${safeId}" style="display:none;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.05);background:rgba(0,0,0,0.25);">
+        <div id="iexp-preview-content-${safeId}" style="font-size:10px;color:var(--parchment);font-family:'Lato',sans-serif;">Carregando...</div>
+      </div>
+    </div>`;
   }).join('');
 }
 
-function ingameToggleExpansion(name, checked){
+async function ingameToggleExpansionPreview(name, safeId){
+  const panel = document.getElementById('iexp-preview-'+safeId);
+  const el = document.getElementById('iexp-preview-content-'+safeId);
+  if(!panel || !el) return;
+  if(panel.style.display !== 'none'){ panel.style.display='none'; return; }
+  panel.style.display = 'block';
+
+  const cache = expansionCardsCache[name];
+  if(cache && cache.turbas !== undefined){
+    renderIngameExpansionPreview(el, cache, name);
+    return;
+  }
+
+  el.textContent = 'Carregando cartas...';
+  try {
+    const result = await supaFetch('global_cards?select=id,name,image_url,pile_index,expansion&order=pile_index.asc');
+    if(result.needAuth || result.networkBlocked){
+      el.innerHTML = '<span style="color:#ee8844;">Login necessário.</span>'; return;
+    }
+    const cards = (result.data||[]).filter(c => c.expansion === name);
+    const turbas = cards.filter(c=>c.pile_index>=0&&c.pile_index<=5);
+    const vagantes = cards.filter(c=>c.pile_index>=6&&c.pile_index<=11);
+    expansionCardsCache[name] = {...(expansionCardsCache[name]||{}), turbas, vagantes};
+    renderIngameExpansionPreview(el, {turbas, vagantes}, name);
+  } catch(e){ el.innerHTML = '<span style="color:#ee6644;">Erro: '+e.message+'</span>'; }
+}
+
+function renderIngameExpansionPreview(el, {turbas, vagantes}, expName){
+  if(!turbas.length && !vagantes.length){
+    el.innerHTML = '<span style="opacity:0.5;font-size:10px;">Nenhuma carta encontrada.</span>';
+    return;
+  }
+
+  // Deduplicate by name
+  const unique = (cards) => { const seen=new Set(); return cards.filter(c=>c&&c.name&&!seen.has(c.name)&&seen.add(c.name)); };
+
+  const section = (label, color, cards) => {
+    if(!cards.length) return '';
+    const safeExp = expName.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    const rows = unique(cards).map(c => {
+      const safeName = (c.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const isActive = activeMonsters.some(m => !m.defeated && m.name === c.name);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:5px;background:rgba(255,255,255,0.02);margin-bottom:2px;">
+        ${c.image_url ? `<img src="${c.image_url}" title="${safeName}" style="width:36px;height:50px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+        <span style="font-family:'Lato',sans-serif;font-size:10px;color:var(--parchment);flex:1;">${c.name||''}</span>
+        ${isActive ? '<span style="font-size:8px;color:#ee6644;font-family:\'Cinzel\',serif;padding:1px 5px;border-radius:3px;background:rgba(238,100,68,0.15);border:1px solid rgba(238,100,68,0.3);">Em campo</span>' : ''}
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:10px;">
+      <div style="font-family:'Cinzel',serif;font-size:8px;color:${color};letter-spacing:1px;padding:3px 0 5px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:5px;">${label} (${unique(cards).length})</div>
+      ${rows}
+    </div>`;
+  };
+
+  el.innerHTML = section('🔴 TURBAS','#ee8888',turbas) + section('💀 VAGANTES','#cc88ee',vagantes);
+}
+
+function ingameToggleExpansion(name, checked, safeId){
   if(checked) selectedExpansions.add(name);
   else selectedExpansions.delete(name);
   applyExpansionFilter();
-  renderIngameExpansionList();
+  // Update row border without full re-render
+  const row = document.getElementById('iexp-row-'+safeId);
+  if(row){
+    row.style.borderColor = checked ? 'var(--gold-dark)' : 'rgba(255,255,255,0.08)';
+    const inner = row.querySelector('div');
+    if(inner) inner.style.background = checked ? 'rgba(201,168,76,0.07)' : 'rgba(255,255,255,0.02)';
+  }
 }
 
 function ingameSelectAllExpansions(){

@@ -819,6 +819,7 @@ let selectedCount=0;
 // ===== EXPANSION SELECTION =====
 let availableExpansions = [];
 let selectedExpansions = new Set();
+let excludedMonsters = new Set(); // monster names manually unchecked
 let expansionCardsCache = {};
 
 async function loadExpansionsForSetup(){
@@ -1136,30 +1137,31 @@ function renderIngameExpansionPreview(el, {turbas, vagantes}, expName){
     el.innerHTML = '<span style="opacity:0.5;font-size:10px;">Nenhuma carta encontrada.</span>';
     return;
   }
-
-  // Deduplicate by name
   const unique = (cards) => { const seen=new Set(); return cards.filter(c=>c&&c.name&&!seen.has(c.name)&&seen.add(c.name)); };
-
   const section = (label, color, cards) => {
     if(!cards.length) return '';
-    const safeExp = expName.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const rows = unique(cards).map(c => {
       const safeName = (c.name||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
       const isActive = activeMonsters.some(m => !m.defeated && m.name === c.name);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:5px;background:rgba(255,255,255,0.02);margin-bottom:2px;">
-        ${c.image_url ? `<img src="${c.image_url}" title="${safeName}" style="width:36px;height:50px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;" onerror="this.style.display='none'">` : ''}
+      const excluded = excludedMonsters.has(c.name);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;background:${excluded?'rgba(80,80,80,0.06)':'rgba(255,255,255,0.03)'};border:1px solid ${excluded?'rgba(255,255,255,0.05)':'rgba(255,255,255,0.1)'};margin-bottom:3px;opacity:${excluded?'0.45':'1'};">
+        <input type="checkbox" ${excluded?'':'checked'} onchange="toggleMonsterExclusion('${safeName}',!this.checked)"
+          style="width:14px;height:14px;cursor:pointer;accent-color:#c9a84c;flex-shrink:0;">
+        ${c.image_url ? `<img src="${c.image_url}" style="width:32px;height:44px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.12);flex-shrink:0;" onerror="this.style.display='none'">` : ''}
         <span style="font-family:'Lato',sans-serif;font-size:10px;color:var(--parchment);flex:1;">${c.name||''}</span>
-        ${isActive ? '<span style="font-size:8px;color:#ee6644;font-family:\'Cinzel\',serif;padding:1px 5px;border-radius:3px;background:rgba(238,100,68,0.15);border:1px solid rgba(238,100,68,0.3);">Em campo</span>' : ''}
-      </div>`;
+        ${isActive ? '<span style="font-size:8px;color:#ee6644;font-family:Cinzel,serif;padding:1px 5px;border-radius:3px;background:rgba(238,100,68,0.15);border:1px solid rgba(238,100,68,0.3);">Em campo</span>' : ''}
+      </label>`;
     }).join('');
-    return `<div style="margin-bottom:10px;">
-      <div style="font-family:'Cinzel',serif;font-size:8px;color:${color};letter-spacing:1px;padding:3px 0 5px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:5px;">${label} (${unique(cards).length})</div>
-      ${rows}
-    </div>`;
+    return `<div style="margin-bottom:10px;"><div style="font-family:'Cinzel',serif;font-size:8px;color:${color};letter-spacing:1px;padding:3px 0 5px;border-bottom:1px solid rgba(255,255,255,0.07);margin-bottom:5px;">${label} (${unique(cards).length})</div>${rows}</div>`;
   };
-
   el.innerHTML = section('🔴 TURBAS','#ee8888',turbas) + section('💀 VAGANTES','#cc88ee',vagantes);
 }
+
+function toggleMonsterExclusion(name, exclude){
+  if(exclude) excludedMonsters.add(name);
+  else excludedMonsters.delete(name);
+}
+
 
 function ingameToggleExpansion(name, checked, safeId){
   if(checked) selectedExpansions.add(name);
@@ -2374,8 +2376,12 @@ async function fetchCardsFromPile(pileIndex, expansionFilter=null){
 }
 
 function pickRandomCard(cards, activeNames){
-  const available = cards.filter(c => !activeNames.includes(c.name));
-  if(available.length === 0) return cards[Math.floor(Math.random()*cards.length)] || null;
+  const available = cards.filter(c => !activeNames.includes(c.name) && !excludedMonsters.has(c.name));
+  if(available.length === 0){
+    // fallback: ignore active-names filter but still respect excluded
+    const fallback = cards.filter(c => !excludedMonsters.has(c.name));
+    return fallback[Math.floor(Math.random()*fallback.length)] || null;
+  }
   return available[Math.floor(Math.random()*available.length)];
 }
 

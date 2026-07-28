@@ -93,6 +93,54 @@ body{
 .player-level-label{font-size:8px;color:var(--parchment);opacity:0.5;letter-spacing:1px;}
 .player-level-val{font-family:'Cinzel Decorative',serif;font-size:15px;color:var(--gold-light);text-shadow:0 0 10px var(--glow-gold);line-height:1;}
 
+/* hero portrait on player card (carta completa, sem corte) */
+.player-card.dead{opacity:0.55;filter:grayscale(0.6);}
+.player-hero-portrait-wrap{position:relative;}
+.player-hero-portrait{width:100%;height:auto;display:block;border-radius:6px;border:1px solid var(--gold-dark);margin-bottom:6px;cursor:zoom-in;transition:border-color .2s;}
+.player-hero-portrait:hover{border-color:var(--gold);}
+.player-hero-portrait-placeholder{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#241c0e,#12100a);font-family:'Cinzel Decorative',serif;color:var(--gold-dark);font-size:16px;letter-spacing:1px;border-radius:6px;border:1px solid var(--dark-border);margin-bottom:6px;}
+.player-hero-name{font-family:'Cinzel',serif;font-size:9px;color:var(--gold-dark);text-align:center;margin-bottom:4px;letter-spacing:0.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hero-flip-btn{position:absolute;bottom:10px;right:4px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;padding:4px 7px;border-radius:6px;background:rgba(10,8,5,0.85);border:1px solid var(--gold-dark);color:var(--gold);cursor:pointer;}
+.hero-flip-btn:hover{border-color:var(--gold);color:var(--gold-light);}
+
+/* vida / mana do herói na sidebar */
+.player-stat-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;}
+.player-stat-label{font-size:8px;color:var(--parchment);opacity:0.55;letter-spacing:1px;font-family:'Cinzel',serif;}
+.player-stat-val{font-family:'Cinzel Decorative',serif;font-size:12px;}
+.player-stat-val.hp{color:#ee7766;}
+.player-stat-val.mp{color:#6699dd;}
+.player-stat-track{height:5px;border-radius:3px;background:var(--dark-border);margin-top:2px;}
+.player-stat-fill{height:100%;border-radius:3px;transition:width .3s;}
+.player-stat-fill.hp{background:linear-gradient(90deg,#7a1a1a,#ee5555);}
+.player-stat-fill.mp{background:linear-gradient(90deg,#1a2a7a,#5588ee);}
+.player-stat-actions{display:flex;gap:4px;margin-top:6px;}
+.pstat-btn{flex:1;font-family:'Cinzel',serif;font-size:8px;letter-spacing:0.5px;padding:5px 2px;border-radius:6px;cursor:pointer;background:var(--dark-card);color:var(--parchment);border:1px solid var(--dark-border);transition:all .2s;}
+.pstat-btn.dmg{border-color:#7a2a2a;color:#ee8888;}
+.pstat-btn.dmg:hover{background:rgba(204,51,51,0.15);border-color:#cc3333;}
+.pstat-btn.heal{border-color:#2a6a2a;color:#88dd88;}
+.pstat-btn.heal:hover{background:rgba(42,136,68,0.15);border-color:#2a8844;}
+.pstat-btn.mana{border-color:#2a3a7a;color:#88aaee;}
+.pstat-btn.mana:hover{background:rgba(51,102,204,0.15);border-color:#3366cc;}
+
+/* hero picker (setup) */
+.hero-pick-btn{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:9px 10px;border-radius:6px;border:1px solid var(--gold-dark);background:var(--dark-card);color:var(--gold);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .2s;}
+.hero-pick-btn:hover:not(:disabled){border-color:var(--gold);background:linear-gradient(135deg,#2a1e06,#16100a);}
+.hero-pick-btn:disabled{opacity:0.35;cursor:not-allowed;}
+.hero-pick-preview{display:flex;align-items:center;gap:7px;margin:5px 0 3px 31px;font-family:'Cinzel',serif;font-size:10px;color:var(--gold-light);}
+.hero-pick-preview img{width:26px;height:34px;object-fit:cover;object-position:top;border-radius:4px;border:1px solid var(--gold-dark);flex-shrink:0;}
+.hero-pick-clear{background:none;border:none;color:#cc4444;cursor:pointer;font-size:13px;padding:0 3px;line-height:1;}
+
+/* hero picker overlay grid */
+.hero-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;width:100%;max-height:50vh;overflow-y:auto;margin:12px 0;}
+.hero-pick-card{background:var(--dark-card);border:1px solid var(--dark-border);border-radius:10px;overflow:hidden;cursor:pointer;transition:all .2s;text-align:left;}
+.hero-pick-card:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 6px 18px rgba(201,168,76,0.15);}
+.hero-pick-card img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;display:block;}
+.hero-pick-card-placeholder{width:100%;aspect-ratio:3/4;background:linear-gradient(135deg,#241c0e,#12100a);display:flex;align-items:center;justify-content:center;font-family:'Cinzel Decorative',serif;color:var(--gold-dark);font-size:13px;letter-spacing:1px;text-align:center;padding:6px;}
+.hero-pick-card-custom{border-style:dashed;border-color:var(--gold-dark);}
+.hero-pick-card-custom:hover{border-style:dashed;border-color:var(--gold);background:rgba(201,168,76,0.06);}
+.hero-pick-card-placeholder-custom{background:linear-gradient(135deg,#1a1408,#0c0a06);color:var(--gold);font-size:15px;letter-spacing:2px;}
+.hero-pick-card-name{font-family:'Cinzel',serif;font-size:10px;color:var(--gold);text-align:center;padding:6px 4px;letter-spacing:0.5px;}
+
 /* center */
 .center-content{flex:1;padding:18px 14px;display:flex;flex-direction:column;align-items:center;gap:20px;}
 
@@ -660,6 +708,41 @@ body{
 </div>
 
 <!-- SPAWN MONSTER TYPE -->
+<!-- HERO PICKER (usa o catalogo de herois do Portal Massive / Heroes Dashboard) -->
+<div class="overlay" id="overlay-hero-picker">
+  <div class="overlay-inner"><div class="popup" style="max-width:560px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div class="popup-title">Escolher Herói</div>
+    <div style="font-family:'Cinzel',serif;font-size:11px;color:var(--gold-dark);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;" id="hero-picker-class-label"></div>
+    <div class="popup-separator"></div>
+    <div id="hero-picker-loading" style="display:none;align-items:center;justify-content:center;gap:10px;margin:16px 0;">
+      <div style="font-family:'Cinzel',serif;font-size:12px;color:var(--parchment);opacity:0.7;">Carregando heróis...</div>
+    </div>
+    <div class="hero-picker-grid" id="hero-picker-grid"></div>
+    <button class="btn-no" onclick="closeOverlay('overlay-hero-picker')">Fechar</button>
+    <input type="file" id="hero-custom-file-input" accept="image/*" style="display:none;" onchange="handleCustomHeroFile(event)">
+  </div></div>
+</div>
+
+<!-- PLAYER STAT (Vida/Mana) -->
+<div class="overlay" id="overlay-player-stat">
+  <div class="overlay-inner"><div class="popup" style="max-width:340px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div id="player-stat-body"></div>
+  </div></div>
+</div>
+
+<!-- CONFERIR VIDA/MANA DA CARTA ESCOLHIDA -->
+<div class="overlay" id="overlay-hero-stats">
+  <div class="overlay-inner"><div class="popup" style="max-width:420px;">
+    <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
+    <div class="ornament ornament-bl"></div><div class="ornament ornament-br"></div>
+    <div id="hero-stats-body"></div>
+  </div></div>
+</div>
+
 <div class="overlay" id="overlay-spawn-type">
   <div class="overlay-inner">  <div class="popup">
     <div class="ornament ornament-tl"></div><div class="ornament ornament-tr"></div>
@@ -814,6 +897,255 @@ function showSetup(){
 }
 
 const CLASSES=['Paladino','Mago','Xamã','Berserker','Necromante','Monge','Tinkerer','Druida','Patrulheiro','Ladrão','Bardo'];
+
+// ===== HEROES DASHBOARD INTEGRATION =====
+// Reaproveita o mesmo catálogo de heróis (imagem + classe) usado no projeto
+// "Heroes Dashboard", vindo da tabela global_settings/personagens_items do Portal Massive.
+let heroesCatalog = [];
+let heroesCatalogLoaded = false;
+let selectedHeroByRow = {}; // { rowIndex: {id,name,imageUrl,classe} }
+let currentHeroPickIdx = null;
+let currentHeroPickerClass = null;
+
+// Algumas classes deste Tracker têm nomes diferentes dos usados no catálogo de heróis
+const HERO_CLASS_ALIAS = { 'Tinkerer':'Artífice', 'Ladrão':'Ladino' };
+
+// Heróis com "forma alternativa" (flip da carta): a forma alternativa NÃO aparece
+// como opção selecionável no catálogo — só pode ser obtida via flip do herói base.
+const HERO_FLIP_FORMS = { 'Lotas': 'Lotas Lobisomem' };
+const HERO_FLIP_HIDDEN_NAMES = new Set(
+  Object.values(HERO_FLIP_FORMS).map(n=>normalizeClassName(n))
+);
+
+const CLASS_INITIALS = {
+  'Paladino':'PA','Mago':'MG','Xamã':'XA','Berserker':'BR','Necromante':'NC',
+  'Monge':'MJ','Tinkerer':'TK','Druida':'DR','Patrulheiro':'PT','Ladrão':'LD','Bardo':'BD',
+};
+function classInitials(cls){ return CLASS_INITIALS[cls] || (cls||'??').trim().slice(0,2).toUpperCase(); }
+
+function normalizeClassName(s){
+  return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+function heroMatchesClass(heroClasse, trackerClassName){
+  // Match EXATO (após normalizar acentos/maiúsculas) — evita falso-positivo tipo
+  // "Ladino" casando dentro de "Paladino" por causa de substring.
+  const target = HERO_CLASS_ALIAS[trackerClassName] || trackerClassName;
+  const a = normalizeClassName(heroClasse);
+  const b = normalizeClassName(target);
+  if(!a || !b) return false;
+  return a === b;
+}
+
+async function loadHeroesCatalog(){
+  if(heroesCatalogLoaded) return;
+  heroesCatalogLoaded = true;
+  try{
+    const res = await supaFetch('global_settings?select=value&key=eq.personagens_items');
+    if(res && res.data && res.data[0] && res.data[0].value){
+      heroesCatalog = JSON.parse(res.data[0].value) || [];
+    }
+  }catch(e){
+    console.warn('[MD2] falha ao carregar catálogo de heróis:', e.message);
+    heroesCatalog = [];
+  }
+}
+
+function onClassChange(idx){
+  const btn=document.getElementById(`hero-pick-btn-${idx}`);
+  if(btn) btn.disabled=false;
+  delete selectedHeroByRow[idx];
+  const prev=document.getElementById(`hero-pick-preview-${idx}`);
+  if(prev) prev.innerHTML='';
+}
+
+async function openHeroPicker(idx){
+  const clsSel=document.getElementById(`pclass-${idx}`);
+  const cls=clsSel && clsSel.value;
+  if(!cls){ alert('Escolha a classe do herói primeiro.'); return; }
+  currentHeroPickIdx=idx;
+  currentHeroPickerClass=cls;
+  document.getElementById('hero-picker-class-label').textContent=cls;
+  document.getElementById('hero-picker-grid').innerHTML='';
+  document.getElementById('hero-picker-loading').style.display='flex';
+  openOverlay('overlay-hero-picker');
+  await loadHeroesCatalog();
+  document.getElementById('hero-picker-loading').style.display='none';
+  renderHeroPickerGrid(cls);
+}
+
+function renderHeroPickerGrid(cls){
+  const grid=document.getElementById('hero-picker-grid');
+  grid.innerHTML='';
+
+  const none=document.createElement('div');
+  none.className='hero-pick-card';
+  none.innerHTML=`<div class="hero-pick-card-placeholder">${classInitials(cls)}</div><div class="hero-pick-card-name">Sem herói específico</div>`;
+  none.onclick=()=>chooseHeroForRow(null);
+  grid.appendChild(none);
+
+  const custom=document.createElement('div');
+  custom.className='hero-pick-card hero-pick-card-custom';
+  custom.innerHTML=`<div class="hero-pick-card-placeholder hero-pick-card-placeholder-custom">+ IMG</div><div class="hero-pick-card-name">Custom<br><span style="opacity:0.6;font-size:9px;">(enviar imagem)</span></div>`;
+  custom.onclick=()=>triggerCustomHeroUpload();
+  grid.appendChild(custom);
+
+  const filtered=heroesCatalog
+    .filter(h=>heroMatchesClass(h.classe, cls))
+    .filter(h=>!HERO_FLIP_HIDDEN_NAMES.has(normalizeClassName(h.name)));
+  if(!filtered.length){
+    const msg=document.createElement('div');
+    msg.style.cssText='grid-column:1/-1;text-align:center;padding:16px 6px;color:var(--parchment);opacity:0.7;font-family:\'Cinzel\',serif;font-size:11px;';
+    msg.textContent='Nenhum herói cadastrado para esta classe no Portal Massive.';
+    grid.appendChild(msg);
+    return;
+  }
+
+  filtered.forEach(h=>{
+    const card=document.createElement('div');
+    card.className='hero-pick-card';
+    card.innerHTML = (h.imageUrl
+      ? `<img src="${h.imageUrl}" alt="${h.name}" loading="lazy">`
+      : `<div class="hero-pick-card-placeholder">${classInitials(cls)}</div>`)
+      + `<div class="hero-pick-card-name">${h.name}</div>`;
+    card.onclick=()=>chooseHeroForRow(h);
+    grid.appendChild(card);
+  });
+}
+
+function chooseHeroForRow(hero){
+  if(currentHeroPickIdx==null) return;
+  const idx=currentHeroPickIdx;
+  // Se o herói tem forma alternativa (flip), localiza a carta correspondente
+  // no catálogo e anexa — ela não aparece como opção própria no seletor.
+  if(hero && HERO_FLIP_FORMS[hero.name]){
+    const altName = HERO_FLIP_FORMS[hero.name];
+    const altHero = heroesCatalog.find(h=>normalizeClassName(h.name)===normalizeClassName(altName));
+    if(altHero) hero = { ...hero, altForm: { name: altHero.name, imageUrl: altHero.imageUrl } };
+  }
+  if(!hero){
+    delete selectedHeroByRow[idx];
+    const prev=document.getElementById(`hero-pick-preview-${idx}`);
+    if(prev) prev.innerHTML='';
+    closeOverlay('overlay-hero-picker');
+    return;
+  }
+  // Carta escolhida: antes de confirmar, mostra a carta ampliada para o jogador
+  // conferir o coração (Vida) e a estrela azul (Mana) impressos nela.
+  closeOverlay('overlay-hero-picker');
+  openHeroStatsConfirm(idx, hero);
+}
+
+function applyHeroSelectionPreview(idx, hero){
+  selectedHeroByRow[idx]=hero;
+  const prev=document.getElementById(`hero-pick-preview-${idx}`);
+  if(prev){
+    prev.innerHTML = `${hero.imageUrl?`<img src="${hero.imageUrl}" alt="${hero.name}">`:''}<span>${hero.name} (❤${hero.maxHp} 🔷${hero.maxMp})</span><button type="button" class="hero-pick-clear" onclick="clearHeroForRow(${idx})" title="Remover">×</button>`;
+  }
+}
+
+// ===== HERÓI CUSTOM (enviar foto/imagem própria) =====
+function triggerCustomHeroUpload(){
+  const input=document.getElementById('hero-custom-file-input');
+  if(!input) return;
+  input.value='';
+  input.click();
+}
+
+function handleCustomHeroFile(evt){
+  const file = evt.target.files && evt.target.files[0];
+  evt.target.value='';
+  if(!file || currentHeroPickIdx==null) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      // Redimensiona para não guardar imagens gigantes em memória
+      const maxDim=900;
+      let {width,height}=img;
+      if(width>maxDim || height>maxDim){
+        const scale=maxDim/Math.max(width,height);
+        width=Math.round(width*scale); height=Math.round(height*scale);
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=width; canvas.height=height;
+      canvas.getContext('2d').drawImage(img,0,0,width,height);
+      const dataUrl=canvas.toDataURL('image/jpeg',0.87);
+      const heroName=(prompt('Nome do seu herói:', 'Herói Custom')||'Herói Custom').trim() || 'Herói Custom';
+      chooseHeroForRow({ id:'custom-'+Date.now(), name:heroName, imageUrl:dataUrl, classe:currentHeroPickerClass, isCustom:true });
+    };
+    img.onerror=()=>alert('Não foi possível ler essa imagem. Tente outro arquivo.');
+    img.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ===== CONFERIR VIDA/MANA IMPRESSOS NA CARTA =====
+let pendingHeroStat = null; // {idx, hero, maxHp, maxMp}
+
+function openHeroStatsConfirm(idx, hero){
+  pendingHeroStat = { idx, hero, maxHp:5, maxMp:3 };
+  renderHeroStatsConfirm();
+  openOverlay('overlay-hero-stats');
+}
+
+function renderHeroStatsConfirm(){
+  if(!pendingHeroStat) return;
+  const { hero, maxHp, maxMp } = pendingHeroStat;
+  const body=document.getElementById('hero-stats-body');
+  body.innerHTML = `
+    <div class="popup-title">Conferir Atributos</div>
+    <div style="font-family:'Cinzel',serif;font-size:10px;color:var(--gold-dark);text-align:center;margin-bottom:10px;letter-spacing:1px;">${hero.name}</div>
+    ${hero.imageUrl?`<img src="${hero.imageUrl}" style="width:100%;max-height:44vh;object-fit:contain;border-radius:10px;border:2px solid var(--gold-dark);display:block;margin:0 auto 12px;">`:''}
+    <div style="font-size:10px;color:var(--parchment);opacity:0.7;text-align:center;margin-bottom:12px;font-family:'Lato',sans-serif;line-height:1.4;">
+      Confira na carta: o <strong style="color:#ee8888;">coração</strong> (canto com número) é a <strong>Vida</strong>, e a <strong style="color:#88aaee;">estrela azul</strong> à esquerda é a <strong>Mana</strong>. Ajuste os valores abaixo para bater com a carta.
+    </div>
+    <div style="display:flex;justify-content:space-around;gap:10px;">
+      <div style="text-align:center;">
+        <div style="font-size:9px;color:var(--gold-dark);letter-spacing:1px;font-family:'Cinzel',serif;margin-bottom:4px;">❤️ VIDA MÁXIMA</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="adjustHeroStat('hp',-1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #7a2a2a;color:#dd6666;font-size:16px;cursor:pointer;">−</button>
+          <span id="hero-stat-hp-val" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#ee8888;min-width:28px;text-align:center;">${maxHp}</span>
+          <button onclick="adjustHeroStat('hp',1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #7a2a2a;color:#dd6666;font-size:16px;cursor:pointer;">+</button>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:9px;color:var(--gold-dark);letter-spacing:1px;font-family:'Cinzel',serif;margin-bottom:4px;">🔷 MANA MÁXIMA</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button onclick="adjustHeroStat('mp',-1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #2a3a7a;color:#6688cc;font-size:16px;cursor:pointer;">−</button>
+          <span id="hero-stat-mp-val" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#88aaee;min-width:28px;text-align:center;">${maxMp}</span>
+          <button onclick="adjustHeroStat('mp',1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #2a3a7a;color:#6688cc;font-size:16px;cursor:pointer;">+</button>
+        </div>
+      </div>
+    </div>
+    <button class="btn-ok" style="width:100%;margin-top:16px;" onclick="confirmHeroStats()">Confirmar</button>`;
+}
+
+function adjustHeroStat(type,delta){
+  if(!pendingHeroStat) return;
+  const key = type==='hp'?'maxHp':'maxMp';
+  let val = pendingHeroStat[key] + delta;
+  if(val<1) val=1;
+  pendingHeroStat[key]=val;
+  const spanId = type==='hp'?'hero-stat-hp-val':'hero-stat-mp-val';
+  const span=document.getElementById(spanId);
+  if(span) span.textContent=val;
+}
+
+function confirmHeroStats(){
+  if(!pendingHeroStat) return;
+  const { idx, hero, maxHp, maxMp } = pendingHeroStat;
+  const finalHero = { ...hero, maxHp, maxMp };
+  applyHeroSelectionPreview(idx, finalHero);
+  pendingHeroStat=null;
+  closeOverlay('overlay-hero-stats');
+}
+
+function clearHeroForRow(idx){
+  delete selectedHeroByRow[idx];
+  const prev=document.getElementById(`hero-pick-preview-${idx}`);
+  if(prev) prev.innerHTML='';
+}
+
 
 let selectedCount=0;
 // ===== EXPANSION SELECTION =====
@@ -1199,11 +1531,13 @@ function selectCount(n){
       <div class="player-input-row">
         <div class="player-input-num">${i}.</div>
         <input class="player-name-input" id="pname-${i}" type="text" placeholder="Nome do Herói ${i}" maxlength="20" style="flex:1.2;">
-        <select class="player-name-input" id="pclass-${i}" style="flex:1;padding:9px 6px;cursor:pointer;">
+        <select class="player-name-input" id="pclass-${i}" style="flex:1;padding:9px 6px;cursor:pointer;" onchange="onClassChange(${i})">
           <option value="" disabled selected>Classe</option>
           ${opts}
         </select>
-      </div>`;
+        <button type="button" class="hero-pick-btn" id="hero-pick-btn-${i}" onclick="openHeroPicker(${i})" disabled>Herói</button>
+      </div>
+      <div class="hero-pick-preview" id="hero-pick-preview-${i}"></div>`;
   }
   document.getElementById('btn-begin').style.display='block';
   const expSel = document.getElementById('expansion-selector');
@@ -1233,6 +1567,9 @@ function startGame(){
   for(let i=1;i<=selectedCount;i++){
     const v=document.getElementById(`pname-${i}`).value.trim();
     const cls=document.getElementById(`pclass-${i}`).value;
+    const chosenHero = selectedHeroByRow[i] || null;
+    const baseMaxHp = chosenHero?.maxHp || 5;
+    const baseMaxMp = chosenHero?.maxMp || 3;
     players.push({
       name:v,
       class:cls,
@@ -1242,6 +1579,10 @@ function startGame(){
       gizmoLevel:cls==='Tinkerer'?1:0,
       gizmoUsedThisTurn:false,
       gizmoInventory:[],
+      heroData: chosenHero,
+      heroFlipped: false,
+      baseMaxHp, baseMaxMp,
+      maxHp:baseMaxHp, hp:baseMaxHp, maxMp:baseMaxMp, mp:baseMaxMp,
     });
   }
   applyExpansionFilter();
@@ -1307,8 +1648,46 @@ function renderPlayersSidebar(){
       ? `<button id="gizmo-btn-${i}" style="margin-top:6px;width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:6px 4px;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;background:linear-gradient(135deg,#0e2a28,#081a18);border:1px solid #2a8a7a;color:#44ddcc;">⚙ Gizmo</button>
          <button id="inv-btn-${i}" style="margin-top:4px;width:100%;font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;padding:5px 4px;border-radius:6px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;background:linear-gradient(135deg,#1a1c2e,#0e0e18);border:1px solid #2a4a7a;color:#6688cc;">📦 Inventário</button>`
       : '';
+    const hd = p.heroData;
+    const showAlt = !!(p.heroFlipped && hd && hd.altForm);
+    const heroImg = showAlt ? hd.altForm.imageUrl : (hd && hd.imageUrl);
+    const heroDisplayName = showAlt ? hd.altForm.name : (hd && hd.name);
+    const canFlip = !!(hd && hd.altForm);
+    const heroPortraitHtml = `
+      <div class="player-hero-portrait-wrap">
+        ${heroImg
+          ? `<img class="player-hero-portrait" src="${heroImg}" alt="${heroDisplayName}" onclick="openLightbox('${heroImg}')" title="Clique para ampliar">`
+          : `<div class="player-hero-portrait-placeholder">${classInitials(p.class)}</div>`}
+        ${canFlip ? `<button class="hero-flip-btn" onclick="toggleHeroFlip(${i})" title="Transformar">⤾ Flip</button>` : ''}
+      </div>`;
+    const heroNameHtml = heroDisplayName
+      ? `<div class="player-hero-name">${heroDisplayName}</div>`
+      : '';
+    const maxHp = p.maxHp||5, maxMp = p.maxMp||3;
+    const hp = p.hp==null?maxHp:p.hp, mp = p.mp==null?maxMp:p.mp;
+    const hpPct = maxHp>0 ? Math.max(0,Math.min(100,Math.round(hp/maxHp*100))) : 0;
+    const mpPct = maxMp>0 ? Math.max(0,Math.min(100,Math.round(mp/maxMp*100))) : 0;
+    const deadClass = hp<=0 ? ' dead' : '';
+    const statsHtml = `
+      <div class="player-stat-row">
+        <span class="player-stat-label">VIDA</span>
+        <span class="player-stat-val hp">${hp}<span style="opacity:0.6;">/${maxHp}</span></span>
+      </div>
+      <div class="player-stat-track"><div class="player-stat-fill hp" style="width:${hpPct}%"></div></div>
+      <div class="player-stat-row">
+        <span class="player-stat-label">MANA</span>
+        <span class="player-stat-val mp">${mp}<span style="opacity:0.6;">/${maxMp}</span></span>
+      </div>
+      <div class="player-stat-track"><div class="player-stat-fill mp" style="width:${mpPct}%"></div></div>
+      <div class="player-stat-actions">
+        <button class="pstat-btn dmg" onclick="openPlayerStatModal(${i},'dmg')">Dano</button>
+        <button class="pstat-btn heal" onclick="openPlayerStatModal(${i},'heal')">Curar</button>
+        <button class="pstat-btn mana" onclick="openPlayerStatModal(${i},'mana')">Mana</button>
+      </div>`;
     el.innerHTML+=`
-      <div class="player-card" id="pcard-${i}">
+      <div class="player-card${deadClass}" id="pcard-${i}">
+        ${heroPortraitHtml}
+        ${heroNameHtml}
         <div class="player-name-lbl">${p.name}</div>
         <div style="font-size:8px;color:var(--gold-dark);letter-spacing:1px;margin-bottom:3px;">${p.class}${gizmoLvlTxt}</div>
         <div class="player-level-row">
@@ -1316,6 +1695,7 @@ function renderPlayersSidebar(){
           <div class="player-level-val" id="plvl-${i}">${p.level}</div>
           <div data-xp-display style="font-size:9px;color:var(--gold-dark);font-family:'Cinzel',serif;">${xpTxt}</div>
         </div>
+        ${statsHtml}
         ${gizmoBtnHtml}
         <div id="ginv-${i}">${invTxt}</div>
       </div>`;
@@ -1330,8 +1710,92 @@ function renderPlayersSidebar(){
   });
 }
 
+// Bônus cumulativo de VIDA/MANA por nível (mesma regra do Heroes Dashboard),
+// aplicado sobre a vida/mana base de CADA herói (lida da própria carta)
+const LEVEL_STAT_BONUS_CUMULATIVE = {
+  1:{hp:0,mp:0}, 2:{hp:1,mp:0}, 3:{hp:2,mp:1}, 4:{hp:3,mp:2}, 5:{hp:4,mp:3},
+};
+function maxStatsForLevel(lvl, baseHp, baseMp){
+  const b = LEVEL_STAT_BONUS_CUMULATIVE[lvl] || LEVEL_STAT_BONUS_CUMULATIVE[5];
+  return { maxHp: (baseHp||5) + b.hp, maxMp: (baseMp||3) + b.mp };
+}
+
+function toggleHeroFlip(idx){
+  const p = players[idx];
+  if(!p || !p.heroData || !p.heroData.altForm) return;
+  p.heroFlipped = !p.heroFlipped;
+  renderPlayersSidebar();
+}
+
+// ===== VIDA / MANA DO HERÓI (mesmas regras do Heroes Dashboard) =====
+let playerStatTarget = null; // {idx}
+
+function openPlayerStatModal(idx, type){
+  const p = players[idx];
+  if(!p) return;
+  playerStatTarget = { idx };
+  const body = document.getElementById('player-stat-body');
+  if(type==='mana'){
+    body.innerHTML = `
+      <div class="popup-title">Mana — ${p.name}</div>
+      <div style="text-align:center;font-family:'Cinzel',serif;font-size:11px;color:var(--parchment);opacity:0.7;margin-bottom:10px;">Mana atual: <strong style="color:#6688cc;">${p.mp}/${p.maxMp}</strong></div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn-no" style="flex:1;" onclick="playerStatMode('use')">− Usar</button>
+        <button class="btn-no" style="flex:1;" onclick="playerStatMode('restore')">+ Restaurar</button>
+      </div>
+      <div id="player-stat-input-row" style="display:none;flex-direction:column;gap:8px;">
+        <input id="player-stat-input" type="number" min="1" value="1" style="width:100%;box-sizing:border-box;text-align:center;font-family:'Cinzel Decorative',serif;font-size:20px;padding:9px;border-radius:8px;border:1px solid var(--gold-dark);background:#050402;color:var(--gold-light);">
+        <div style="display:flex;gap:8px;">
+          <button class="btn-no" style="flex:1;" onclick="closeOverlay('overlay-player-stat')">Cancelar</button>
+          <button class="btn-ok" style="flex:1;" id="player-stat-confirm-btn">Confirmar</button>
+        </div>
+      </div>
+      <button class="btn-no" style="width:100%;margin-top:8px;" onclick="closeOverlay('overlay-player-stat')">Cancelar</button>`;
+  } else {
+    const labels = { dmg:`Dano — ${p.name}`, heal:`Curar — ${p.name}` };
+    body.innerHTML = `
+      <div class="popup-title">${labels[type]}</div>
+      <input id="player-stat-input" type="number" min="1" value="1" style="width:100%;box-sizing:border-box;text-align:center;font-family:'Cinzel Decorative',serif;font-size:22px;padding:10px;border-radius:8px;border:1px solid var(--gold-dark);background:#050402;color:var(--gold-light);margin:12px 0;">
+      <div style="display:flex;gap:8px;">
+        <button class="btn-no" style="flex:1;" onclick="closeOverlay('overlay-player-stat')">Cancelar</button>
+        <button class="btn-ok" style="flex:1;" onclick="confirmPlayerStatAction('${type}')">Confirmar</button>
+      </div>`;
+  }
+  openOverlay('overlay-player-stat');
+  setTimeout(()=>document.getElementById('player-stat-input')?.focus(),50);
+}
+
+function playerStatMode(mode){
+  const row = document.getElementById('player-stat-input-row');
+  row.style.display='flex';
+  const btn = document.getElementById('player-stat-confirm-btn');
+  btn.onclick = ()=>confirmPlayerStatAction(mode==='use' ? 'mana_use' : 'mana_restore');
+  setTimeout(()=>document.getElementById('player-stat-input')?.focus(),50);
+}
+
+function confirmPlayerStatAction(type){
+  if(!playerStatTarget) return;
+  const p = players[playerStatTarget.idx];
+  const v = parseInt(document.getElementById('player-stat-input')?.value) || 1;
+  if(!p){ closeOverlay('overlay-player-stat'); return; }
+  if(type==='dmg'){ p.hp = Math.max(0, p.hp - v); }
+  else if(type==='heal'){ p.hp = Math.min(p.maxHp, p.hp + v); }
+  else if(type==='mana_use'){ p.mp = Math.max(0, p.mp - v); }
+  else if(type==='mana_restore'){ p.mp = Math.min(p.maxMp, p.mp + v); }
+  closeOverlay('overlay-player-stat');
+  playerStatTarget = null;
+  renderPlayersSidebar();
+}
+
 function updatePlayerLevel(idx,lvl){
-  players[idx].level=lvl;
+  const p = players[idx];
+  p.level=lvl;
+  // Ajusta o máximo de vida/mana conforme o nível, sem curar automaticamente
+  const { maxHp, maxMp } = maxStatsForLevel(lvl, p.baseMaxHp, p.baseMaxMp);
+  p.maxHp = maxHp;
+  p.maxMp = maxMp;
+  if(p.hp==null) p.hp = maxHp;
+  if(p.mp==null) p.mp = maxMp;
   // Full re-render ensures XP and level are always in sync
   renderPlayersSidebar();
 }
@@ -2403,10 +2867,13 @@ function adjustHordeHp(delta){
 
 function adjustRoamingHp(delta){
   const el = document.getElementById('roaming-hp-val');
+  const tot = document.getElementById('roaming-hp-total');
   if(!el) return;
+  const count = players.length||1;
   let val = parseInt(el.textContent||'5') + delta;
   if(val < 1) val = 1;
   el.textContent = val;
+  if(tot) tot.textContent = val * count;
 }
 
 async function spawnHorde(fromTrack){
@@ -2541,18 +3008,20 @@ async function spawnRoaming(fromTrack){
     `<span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-family:'Cinzel',serif;letter-spacing:1px;background:${ts.badge};color:#fff;margin-bottom:8px;">${PNAMES[pileIndex]} — ${ts.label}</span><br>`+
     `<strong style="color:#bb77ee;">🎁 Recompensa:</strong> ${roamingReward}`+
     `<div style="margin-top:10px;background:rgba(0,0,0,0.3);border-radius:8px;padding:10px;border:1px solid rgba(201,168,76,0.2);">
-      <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold-dark);letter-spacing:1px;margin-bottom:6px;">❤️ VIDA <span style="font-size:8px;opacity:0.6;">(veja na carta)</span></div>
+      <div style="font-family:'Cinzel',serif;font-size:9px;color:var(--gold-dark);letter-spacing:1px;margin-bottom:6px;">❤️ VIDA POR HERÓI <span style="font-size:8px;opacity:0.6;">(veja na carta)</span></div>
       <div style="display:flex;align-items:center;gap:8px;justify-content:center;">
         <button onclick="adjustRoamingHp(-1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #7a2a2a;color:#dd6666;font-size:16px;cursor:pointer;">−</button>
         <span id="roaming-hp-val" style="font-family:'Cinzel Decorative',serif;font-size:20px;color:#ee8888;min-width:32px;text-align:center;">5</span>
         <button onclick="adjustRoamingHp(1)" style="width:28px;height:28px;border-radius:50%;background:var(--dark-card);border:1px solid #7a2a2a;color:#dd6666;font-size:16px;cursor:pointer;">+</button>
+        <span style="font-size:10px;color:var(--parchment);opacity:0.6;margin-left:4px;">× ${count} heróis = <strong style="color:#ee8888;" id="roaming-hp-total">${5*count}</strong></span>
       </div>
-      <div style="font-size:9px;color:var(--parchment);opacity:0.4;text-align:center;margin-top:4px;font-family:'Lato',sans-serif;">Se aparecer "/Herói", multiplique pelo nº de heróis</div>
+      <div style="font-size:9px;color:var(--parchment);opacity:0.4;text-align:center;margin-top:4px;font-family:'Lato',sans-serif;">A vida da carta já é POR HERÓI — o total acima é aplicado automaticamente</div>
     </div>`;
 
   const spBtn=document.getElementById('overlay-horde-spawned').querySelector('.btn-ok');
   spBtn.onclick=()=>{
-    const hpVal = parseInt(document.getElementById('roaming-hp-val')?.textContent)||5;
+    const hpPerHero = parseInt(document.getElementById('roaming-hp-val')?.textContent)||5;
+    const hpVal = hpPerHero * count;
     activeMonsters.push({
       uid:id,type:'roaming',uid_base:card.id,
       name:card.name,icon:'🃏',color:ts.border,
@@ -3699,6 +4168,7 @@ function resetGame(){
   currentStep=1; isExtraTrack=false;
   pendingEvents=[]; processingEvent=false;
   levelUpAsked=false; players=[]; pendingLevelChoices={};
+  selectedHeroByRow={}; currentHeroPickIdx=null;
   pendingGizmoUpgrades=[]; gizmoPickIdx=-1; gizmoPickTokens=[];
   activeMonsters=[]; monsterIdCounter=0; gameMode='simple'; selectedTrack='normal';
   doorDeck=[]; doorDiscard=[];
